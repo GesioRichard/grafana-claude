@@ -61,10 +61,10 @@ cards novos para manter o mesmo significado visual:
   contador acumulado, não faz sentido como % de capacidade instantânea) — era assim
   no dashboard original também.
 
-## Arquitetura atual (desde a v12)
+## Arquitetura atual (desde a v13)
 
 Todos os painéis são do tipo `gapit-htmlgraphics-panel` (ver `STANDARDS.md` para o
-schema de opções e os gotchas do plugin). 16 painéis no total, substituindo os 48
+schema de opções e os gotchas do plugin). 15 painéis no total, substituindo os 48
 painéis nativos (`stat`/`bargauge`/`timeseries`) do dashboard original:
 
 | Seção | Qtde painéis | `gridPos` (x,y,w,h) |
@@ -73,10 +73,9 @@ painéis nativos (`stat`/`bargauge`/`timeseries`) do dashboard original:
 | KPIs (Potência → Dia → Total acumulado) | 3 | `(0,2,8,4)`, `(8,2,8,4)`, `(16,2,8,4)` |
 | Cards de inversores, linha 1 (5 cards) | 5 | `y=6, h=7`, larguras `[5,5,5,5,4]` |
 | Cards de inversores, linha 2 (5 cards) | 5 | `y=13, h=7`, larguras `[5,5,5,5,4]` |
-| Totais diários (linha de pontos horizontal, full width) | 1 | `(0,20,24,2)` |
-| Gráfico semanal "Total Power Generated" (full width) | 1 | `(0,22,24,7)` |
+| "Energy per Week" (cards diários + linha semanal, um painel só, full width) | 1 | `(0,20,24,9)` |
 
-Soma exata: `2+4+7+7+2+7=29` — **no teto máximo da grade (24×29)**. Esse teto é
+Soma exata: `2+4+7+7+9=29` — **no teto máximo da grade (24×29)**. Esse teto é
 fixo desde a primeira versão do redesign (herdado do dashboard original, que já
 ocupava 24×29) e **nunca pode ser ultrapassado** — a TV não tem rolagem. Qualquer
 painel novo precisa encaixar reduzindo outra seção, nunca somando por cima do
@@ -93,59 +92,47 @@ horizontal, por pedido do usuário na v10), barra de carga com gradiente contín
 (sem degraus) e gráfico de série temporal com tooltip/hover e eixo de tempo
 automático (múltiplas marcações, não só início/fim).
 
-### Totais diários e gráfico semanal (dois painéis separados desde a v12)
+### Painel "Energy per Week" (cards diários + linha semanal juntos, desde a v13)
 
-Até a v11 estavam combinados num painel só; o usuário pediu para separar (ver
-changelog v12) e ambos usam a mesma janela de tempo fixa de 7 dias
-(`panel.timeFrom = "7d"`, independente do seletor global do dashboard — ver
-`STANDARDS.md`).
+Passou por 3 formatos diferentes até chegar aqui — ver changelog v10/v11/v12/v13
+abaixo para o histórico completo de cada tentativa. Usa 2 queries no mesmo painel
+(`EW_*` no script gerador, posição `(0,20,24,9)`), ambas com a janela de tempo fixa
+de 7 dias (`panel.timeFrom = "7d"`, independente do seletor global do dashboard —
+ver `STANDARDS.md`):
 
-**Totais diários** (`DAILY_*` no script gerador, painel `(0,20,24,2)`):
+- **Query A** — `Power Generated`, host `/.*/`, `sumSeries()`, como série temporal
+  completa (não só último valor) — vira a linha/área do gráfico principal.
+- **Query B** — `Energy Generated Day`, host `/.*/`, `sumSeries()` — usada pelos
+  cards diários no topo do painel.
 
-- Query: `Energy Generated Day`, host `/.*/`, `sumSeries()`.
-- Design: **linha de pontos horizontal**, não barras — o usuário rejeitou
-  explicitamente o formato de barras por "dividir" visualmente o gráfico de linha
-  abaixo. Ver padrão reaproveitável em `STANDARDS.md` ("Totais por período em pouco
-  espaço vertical").
-- Algoritmo: agrupa os pontos por **dia calendário local** (`getFullYear()+'-'+
-  getMonth()+'-'+getDate()` do timestamp) e pega o **valor máximo** de cada grupo
-  (esse máximo é o total gerado naquele dia, já que o item reseta à meia-noite e
-  sobe ao longo do dia). Pega só os últimos 7 dias (`.slice(-7)`), ordenados por
-  tempo.
-- O dia de hoje (comparado com `new Date()`) mostra a label **"HOJE"** em vez da
-  data, e o ponto fica verde/pulsante (classe `.today`) em vez de âmbar — sinaliza
-  que é um total parcial, ainda subindo.
-- **Validado contra os dados reais** antes de publicar (ver
-  `scripts/paineis-solares-fronius/mock_single.js`, marcador `"db-row"`): os 7
-  valores ficaram entre 1,22 e 1,57 MWh/dia (mais "HOJE" parcial em 342 kWh),
-  batendo com uma conta cruzada feita a partir do delta diário do contador
-  `Energy Generated Total` (~1,3-1,8 MWh/dia) — confirma que não é um artefato de
-  agregação do Zabbix, é a geração real (10 inversores × ~27,3kW × ~5-6h de sol
-  pico/dia).
-- Caixa bem curta (`h=2`, ~68px) — cabe porque não há escala de altura
-  proporcional ao valor, só texto + marcador fixo + rótulo.
+Layout interno (de cima pra baixo, dentro da mesma caixa):
 
-**Gráfico semanal** (`WEEKLY_*` no script gerador, painel `(0,22,24,7)`):
+1. **Título "Energy per Week"** (com o ponto verde "ao vivo", igual ao resto do
+   dashboard) — colado o mais próximo possível do topo do painel, logo abaixo dos
+   cards de inversores, por pedido explícito do usuário (v13).
+2. **7 cards diários** (`.ewday`), um por dia dos últimos 7 dias: data (ou "HOJE")
+   em cima, valor embaixo. O dia de hoje tem fundo/borda verde (classe `.today`) em
+   vez do âmbar padrão — sinaliza total parcial, ainda subindo. Mesmo algoritmo de
+   agrupamento por dia-calendário + valor máximo do grupo (ver `STANDARDS.md`,
+   "Agregando um contador que reseta diariamente") usado nas tentativas anteriores
+   — só a apresentação visual mudou (de linha de pontos pra cards de verdade).
+3. **Gráfico de linha** (`flex:1`, ocupa o espaço restante) + eixo de tempo
+   automático embaixo — mesmo padrão de hover/tooltip dos cards de inversor (ver
+   `STANDARDS.md`), só que a label do tooltip mostra data+hora (`DD/MM HH:MM`) em
+   vez de só `HH:MM`, já que o intervalo cobre vários dias.
 
-- Query: `Power Generated`, host `/.*/`, `sumSeries()`, como série temporal
-  completa (não só último valor) — vira a linha/área do gráfico.
-- `data.timeRange` já vem com o intervalo de 7 dias aplicado, então o mesmo
-  algoritmo de eixo automático do `STANDARDS.md` funciona sem alteração (gera
-  ticks diários, formatados como `DD/MM`, quando o intervalo total é maior que
-  ~1,5 dia).
-- Zabbix usa *trends* (agregados, normalmente de hora em hora) para dados com mais
-  de poucos dias — nesse horizonte de 7 dias, a query real devolveu ~167 pontos
-  (1 por hora), suficiente para mostrar a curva solar subindo/descendo em cada um
-  dos 7 dias claramente.
-- Reaproveita o mesmo padrão de hover/tooltip dos cards (ver `STANDARDS.md`), só que
-  a label do tooltip mostra data+hora (`DD/MM HH:MM`) em vez de só `HH:MM`, já que o
-  intervalo cobre vários dias.
-- **`h=7`** (bem mais alto que o `h=6` compartilhado da v10/v11) — o usuário
-  reclamou que a versão anterior (linha + barras no mesmo painel) deixava a curva
-  "achatada demais pra enxergar diferenças nos picos". Pra abrir esse espaço sem
-  estourar o teto de 29 linhas, **header caiu de `h=3` pra `h=2`** e os **cards de
-  inversor caíram de `h=8` pra `h=7`** (ambos ainda com folga de sobra, testado no
-  orçamento de altura de cada um — ver `STANDARDS.md` para a fórmula).
+Zabbix usa *trends* (agregados, normalmente de hora em hora) para dados com mais de
+poucos dias — nesse horizonte de 7 dias, a query real devolveu ~167 pontos (1 por
+hora), suficiente para mostrar a curva solar subindo/descendo em cada um dos 7 dias
+claramente.
+
+**Validado contra dados reais** antes de publicar (ver
+`scripts/paineis-solares-fronius/mock_single.js`, marcador `"ew-days"`): os 7
+valores dos cards diários ficaram entre 1,22 e 1,57 MWh/dia (mais "HOJE" parcial),
+batendo com uma conta cruzada feita a partir do delta diário do contador
+`Energy Generated Total` (~1,3-1,8 MWh/dia) — confirma que não é um artefato de
+agregação do Zabbix, é a geração real (10 inversores × ~27,3kW × ~5-6h de sol
+pico/dia).
 
 ## Script gerador
 
@@ -155,10 +142,10 @@ changelog v12) e ambos usam a mesma janela de tempo fixa de 7 dias
   pronto para `POST /api/dashboards/db`.
 - Scripts de apoio também persistidos na mesma pasta: `validate_js.js` (checa
   sintaxe de todo `onInit`/`onRender` gerado) e `mock_single.js` (harness de mock
-  genérico pra validar qualquer painel de 1 query de série temporal antes de
-  publicar — recebe um marcador de HTML pra achar o painel certo, ex. `"wk-spark"`
-  ou `"db-row"` — ver padrão de teste no `STANDARDS.md`).
-- Um snapshot do dashboard tal como publicado na v12 está salvo em
+  genérico pra validar qualquer painel antes de publicar — recebe um marcador de
+  HTML pra achar o painel certo, ex. `"ew-days"` — ver padrão de teste no
+  `STANDARDS.md`).
+- Um snapshot do dashboard tal como publicado na v13 está salvo em
   `../scripts/paineis-solares-fronius/last-deployed-snapshot.json` — útil como
   referência/rollback e como "backup bruto" de entrada pra próxima geração (os
   metadados do dashboard — título, uid, id, tempo, refresh — vêm dali; só os
@@ -238,10 +225,24 @@ changelog v12) e ambos usam a mesma janela de tempo fixa de 7 dias
   teto — **registrado como regra permanente em `STANDARDS.md`** pra não estourar
   de novo em pedidos futuros.
 
+- **v13**: usuário reportou que o painel de totais diários (v12, linha de pontos)
+  "não dá pra visualizar os dados" (provavelmente um problema visual de legibilidade
+  num painel de só 2 linhas de grade, não um bug de dados — a query era de 1 target
+  só, o mecanismo mais confiável que existe no dashboard). Pediu uma reestruturação
+  maior: voltar a juntar tudo num painel só (pra "ganhar espaço" evitando a
+  moldura/padding duplicados de 2 painéis), com o título "Energy per Week" colado
+  o mais perto possível dos cards de inversores, os totais diários como **cards de
+  verdade** (não barras, não linha de pontos) logo abaixo do título, e o gráfico de
+  linha ocupando o resto do espaço — do mesmo tamanho "de hoje" (ou maior, já que a
+  consolidação economiza a moldura de um painel inteiro). Resultado: painel único
+  `(0,20,24,9)`, substituindo os dois painéis da v12. Nenhuma mudança no orçamento
+  de altura das outras seções (header/cards continuam como na v12) — a altura total
+  do painel combinado (`9`) é exatamente a soma dos dois painéis anteriores
+  (`2+7`), então o teto de 29 continua intacto.
+
 ## Pendências / próximos passos conhecidos
 
-Nenhuma pendência em aberto registrada após a v12 — o usuário ainda não confirmou
-visualmente esta rodada (painéis separados, totais diários em linha de pontos,
-gráfico de linha mais alto). Confirmar com ele antes de considerar esta versão
-definitivamente estável, e atualizar esta seção (ou movê-la para "Histórico") assim
-que ele validar.
+Nenhuma pendência em aberto registrada após a v13 — o usuário ainda não confirmou
+visualmente esta rodada (painel único "Energy per Week" com cards diários + linha
+semanal). Confirmar com ele antes de considerar esta versão definitivamente
+estável, e atualizar esta seção (ou movê-la para "Histórico") assim que ele validar.

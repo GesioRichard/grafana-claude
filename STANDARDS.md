@@ -240,19 +240,28 @@ grandeza. Isso pegou uma suspeita de bug (valores "grandes demais") que na verda
 era só uma referência mental errada do que é um dia "completo" vs. uma leitura
 parcial de manhã (ver changelog do dashboard Fronius, v11).
 
-## Totais por período em pouco espaço vertical: linha de pontos horizontal
+## Totais por período em pouco espaço: cards compactos (preferência confirmada)
 
-Quando o espaço vertical disponível é curto demais para um gráfico de barras (ou o
-usuário simplesmente não quer barras — ver changelog do dashboard Fronius, v12: o
-usuário rejeitou explicitamente barras verticais por "dividir" o gráfico de linha
-abaixo), uma alternativa compacta e com bom acabamento visual é uma **linha de
-pontos horizontal**: uma linha fina contínua atravessando o painel, com um ponto
-(`.db-dot`) por item (ex.: por dia), valor acima e rótulo (data, "HOJE" etc.) abaixo
-de cada ponto. Cabe em muito pouca altura (testado com painel de 2 linhas de grade,
-~68px) porque não precisa de uma escala de altura proporcional ao valor — só texto +
-um marcador fixo. Destaque o item "atual/parcial" (ex.: hoje) com uma cor diferente
-(verde, consistente com o indicador "ao vivo" do resto do dashboard) e animação de
-pulso, em vez de deixá-lo visualmente igual aos itens completos.
+Para mostrar "total de cada item de um período" (ex.: total por dia dos últimos 7
+dias) junto de um gráfico de linha do mesmo tema, o dashboard Fronius passou por 3
+formatos antes de chegar no que o usuário realmente queria — guarde esse histórico
+pra não repetir as tentativas rejeitadas em outro dashboard:
+
+1. **Barras verticais no mesmo painel do gráfico de linha** (v11) — rejeitado: o
+   usuário achou que as barras "dividiam" visualmente o gráfico de linha abaixo.
+2. **Linha de pontos horizontal, em painel separado** (v12) — tecnicamente mais
+   discreta, mas acabou sendo pouco legível na TV real ("não dá pra visualizar os
+   dados") e o usuário não gostou de ter dois painéis separados.
+3. **Cards compactos, no mesmo painel do gráfico de linha, com o título colado o
+   mais perto possível da seção acima** (v13, preferência confirmada) — cada card é
+   uma caixinha com borda/fundo sutil (`rgba(cor,0.07-0.2)`, mesma paleta do item),
+   rótulo (data ou "HOJE") em cima, valor embaixo. Destaque o item "atual/parcial"
+   (ex.: hoje) com uma cor diferente (verde, consistente com o indicador "ao vivo"
+   do resto do dashboard) trocando o fundo/borda do card, não só o texto.
+
+**Lição**: nem sempre a opção mais "minimalista" (menos elementos visuais) é a mais
+legível ou a preferida — confirme o resultado real com o usuário antes de assumir
+que uma versão mais enxuta é automaticamente melhor.
 
 ## Cálculo de tamanho de fonte para TV (método AVIXA)
 

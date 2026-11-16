@@ -544,56 +544,66 @@ const HEADER_ONINIT = GLOBAL_BG_JS + RANGE_CALC;
 const HEADER_ONRENDER = RANGE_CALC;
 
 /* ------------------------------------------------------------------ */
-/* WEEKLY chart panel (fixed 7-day window, full width)                 */
+/* ENERGY PER WEEK panel: daily cards + weekly line, fixed 7-day window */
+/* (combined into ONE panel on request, title close to the cards above, */
+/*  daily cards in the space gained, chart kept as tall as before)      */
 /* ------------------------------------------------------------------ */
 
-const WEEKLY_CSS = `
+const EW_CSS = `
 *{box-sizing:border-box;}
-.wk{
+.ew{
   width:100%;height:100%;display:flex;flex-direction:column;
   font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#e8f1ff;
   background:linear-gradient(160deg,#0b1830 0%,#0a1428 55%,#081022 100%);
   border:1px solid rgba(96,165,250,0.18);border-radius:10px;
-  padding:10px 22px 10px 22px;overflow:hidden;
+  padding:8px 22px 10px 22px;overflow:hidden;
 }
-.wkhead{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;flex:none;}
-.wkdot{width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;flex:none;align-self:center;animation:pulse 1.8s infinite;}
+.ewhead{display:flex;align-items:baseline;gap:10px;margin-bottom:7px;flex:none;}
+.ewdot{width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;flex:none;align-self:center;animation:pulse 1.8s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
-.wktitle{font-size:16px;font-weight:800;letter-spacing:.6px;color:#dce9ff;text-transform:uppercase;}
-.wksub{font-size:12px;font-weight:600;color:#7f93b3;letter-spacing:.4px;}
-.wksparkwrap{position:relative;flex:1;min-height:0;}
-.wkspark{width:100%;height:100%;display:block;}
-.wkvline{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.4);display:none;pointer-events:none;}
-.wktip{position:absolute;top:4px;transform:translateX(-50%);background:rgba(4,9,18,0.95);border:1px solid rgba(96,165,250,0.35);border-radius:6px;padding:5px 11px;font-size:13px;font-weight:700;color:#fff;white-space:nowrap;display:none;pointer-events:none;z-index:2;}
-.wkaxis{display:flex;justify-content:space-between;font-size:12px;color:#6f84a8;margin-top:5px;flex:none;font-weight:600;}
+.ewtitle{font-size:16px;font-weight:800;letter-spacing:.6px;color:#dce9ff;text-transform:uppercase;}
+.ewsub{font-size:12px;font-weight:600;color:#7f93b3;letter-spacing:.4px;}
+.ewdays{display:flex;gap:8px;margin-bottom:9px;flex:none;}
+.ewday{flex:1;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.ewday.today{background:rgba(52,211,153,0.09);border-color:rgba(52,211,153,0.4);}
+.ewday-lbl{font-size:11px;font-weight:700;color:#d8bf85;letter-spacing:.3px;}
+.ewday.today .ewday-lbl{color:#34d399;}
+.ewday-val{font-size:14px;font-weight:800;color:#ffe4ad;white-space:nowrap;}
+.ewday.today .ewday-val{color:#baf7d8;}
+.ewsparkwrap{position:relative;flex:1;min-height:0;}
+.ewspark{width:100%;height:100%;display:block;}
+.ewvline{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.4);display:none;pointer-events:none;}
+.ewtip{position:absolute;top:4px;transform:translateX(-50%);background:rgba(4,9,18,0.95);border:1px solid rgba(96,165,250,0.35);border-radius:6px;padding:5px 11px;font-size:13px;font-weight:700;color:#fff;white-space:nowrap;display:none;pointer-events:none;z-index:2;}
+.ewaxis{display:flex;justify-content:space-between;font-size:12px;color:#6f84a8;margin-top:5px;flex:none;font-weight:600;}
 `;
 
-const WEEKLY_HTML = `
-<div class="wk">
-  <div class="wkhead"><span class="wkdot"></span><span class="wktitle">Total Power Generated</span><span class="wksub">&mdash; ULTIMOS 7 DIAS</span></div>
-  <div class="wksparkwrap" id="wk-sparkwrap">
-    <svg class="wkspark" id="wk-spark" viewBox="0 0 1600 220" preserveAspectRatio="none">
+const EW_HTML = `
+<div class="ew">
+  <div class="ewhead"><span class="ewdot"></span><span class="ewtitle">Energy per Week</span><span class="ewsub">&mdash; ULTIMOS 7 DIAS</span></div>
+  <div class="ewdays" id="ew-days"></div>
+  <div class="ewsparkwrap" id="ew-sparkwrap">
+    <svg class="ewspark" id="ew-spark" viewBox="0 0 1600 220" preserveAspectRatio="none">
       <defs>
-        <linearGradient id="wkFill" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="ewFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#ffb648" stop-opacity="0.5"/>
           <stop offset="100%" stop-color="#ffb648" stop-opacity="0"/>
         </linearGradient>
       </defs>
-      <path id="wk-area" fill="url(#wkFill)" stroke="none"></path>
-      <path id="wk-line" fill="none" stroke="#ffb648" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+      <path id="ew-area" fill="url(#ewFill)" stroke="none"></path>
+      <path id="ew-line" fill="none" stroke="#ffb648" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
     </svg>
-    <div class="wkvline" id="wk-vline"></div>
-    <div class="wktip" id="wk-tip"></div>
+    <div class="ewvline" id="ew-vline"></div>
+    <div class="ewtip" id="ew-tip"></div>
   </div>
-  <div class="wkaxis" id="wk-axis"></div>
+  <div class="ewaxis" id="ew-axis"></div>
 </div>
 `;
 
-const WEEKLY_ONINIT = GLOBAL_BG_JS + HELPERS + `
-var sparkwrap = htmlNode.getElementById('wk-sparkwrap');
-var vline = htmlNode.getElementById('wk-vline');
-var tip = htmlNode.getElementById('wk-tip');
-var svgEl = htmlNode.getElementById('wk-spark');
+const EW_ONINIT = GLOBAL_BG_JS + HELPERS + `
+var sparkwrap = htmlNode.getElementById('ew-sparkwrap');
+var vline = htmlNode.getElementById('ew-vline');
+var tip = htmlNode.getElementById('ew-tip');
+var svgEl = htmlNode.getElementById('ew-spark');
 if (sparkwrap && !sparkwrap.__hgBound) {
   sparkwrap.__hgBound = true;
   sparkwrap.addEventListener('mousemove', function (evt) {
@@ -624,20 +634,58 @@ if (sparkwrap && !sparkwrap.__hgBound) {
 }
 `;
 
-const WEEKLY_ONRENDER = HELPERS + `
+const EW_ONRENDER = HELPERS + `
 try {
 var numFields = hg_allNumericFields();
 var timeFields = hg_allTimeFields();
-var vals = hg_values(numFields[0]);
+var powerVals = hg_values(numFields[0]);
+var dayVals = hg_values(numFields[1]);
 var tVals = hg_values(timeFields[0]);
+
 var points = [];
-for (var i = 0; i < vals.length; i++) {
-  if (vals[i] != null && !isNaN(vals[i])) points.push({ t: tVals[i], v: vals[i] });
+for (var i = 0; i < powerVals.length; i++) {
+  if (powerVals[i] != null && !isNaN(powerVals[i])) points.push({ t: tVals[i], v: powerVals[i] });
 }
 
-var pathLine = htmlNode.getElementById('wk-line');
-var pathArea = htmlNode.getElementById('wk-area');
-var svgNode = htmlNode.getElementById('wk-spark');
+var daysEl = htmlNode.getElementById('ew-days');
+if (daysEl) {
+  daysEl.innerHTML = '';
+  var byDay = {};
+  for (var bi = 0; bi < dayVals.length; bi++) {
+    if (dayVals[bi] == null || isNaN(dayVals[bi])) continue;
+    var tms = tVals[bi];
+    var dte = new Date(tms);
+    var key = dte.getFullYear() + '-' + dte.getMonth() + '-' + dte.getDate();
+    if (!byDay[key]) { byDay[key] = { max: dayVals[bi], t: tms }; }
+    else {
+      if (dayVals[bi] > byDay[key].max) byDay[key].max = dayVals[bi];
+      if (tms > byDay[key].t) byDay[key].t = tms;
+    }
+  }
+  var dayKeys = Object.keys(byDay).sort(function (a, b) { return byDay[a].t - byDay[b].t; });
+  dayKeys = dayKeys.slice(-7);
+  var now = new Date();
+  var todayKey = now.getFullYear() + '-' + now.getMonth() + '-' + now.getDate();
+  var pad0 = function (n) { return (n < 10 ? '0' : '') + n; };
+  dayKeys.forEach(function (k) {
+    var day = byDay[k];
+    var isToday = (k === todayKey);
+    var card = document.createElement('div'); card.className = 'ewday' + (isToday ? ' today' : '');
+    var lblEl = document.createElement('div'); lblEl.className = 'ewday-lbl';
+    var dd = new Date(day.t);
+    lblEl.textContent = isToday ? 'HOJE' : (pad0(dd.getDate()) + '/' + pad0(dd.getMonth() + 1));
+    var valEl = document.createElement('div'); valEl.className = 'ewday-val';
+    var fmt = hg_fmtEnergy(day.max);
+    valEl.textContent = fmt.text + ' ' + fmt.unit;
+    card.appendChild(lblEl);
+    card.appendChild(valEl);
+    daysEl.appendChild(card);
+  });
+}
+
+var pathLine = htmlNode.getElementById('ew-line');
+var pathArea = htmlNode.getElementById('ew-area');
+var svgNode = htmlNode.getElementById('ew-spark');
 if (svgNode) svgNode.__hgPoints = points;
 if (pathLine && pathArea) {
   if (points.length >= 2) {
@@ -659,7 +707,7 @@ if (pathLine && pathArea) {
     pathArea.setAttribute('d', '');
   }
 }
-var axisEl = htmlNode.getElementById('wk-axis');
+var axisEl = htmlNode.getElementById('ew-axis');
 if (axisEl) {
   axisEl.innerHTML = '';
   if (points.length >= 2) {
@@ -684,89 +732,6 @@ if (axisEl) {
       axisEl.appendChild(span);
     });
   }
-}
-} catch (e) {}
-`;
-
-/* ------------------------------------------------------------------ */
-/* DAILY totals panel (horizontal dot-timeline, fixed 7-day window)    */
-/* ------------------------------------------------------------------ */
-
-const DAILY_CSS = `
-*{box-sizing:border-box;}
-.db{
-  width:100%;height:100%;display:flex;align-items:center;gap:18px;
-  font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#e8f1ff;
-  background:linear-gradient(160deg,#0b1830 0%,#0a1428 55%,#081022 100%);
-  border:1px solid rgba(96,165,250,0.18);border-radius:10px;
-  padding:0 22px;overflow:hidden;
-}
-.db-title{flex:none;font-size:13px;font-weight:800;letter-spacing:.5px;color:#dce9ff;text-transform:uppercase;white-space:nowrap;}
-.db-divider{width:1px;height:28px;background:rgba(96,165,250,0.25);flex:none;}
-.db-row{position:relative;flex:1;height:100%;display:flex;justify-content:space-between;align-items:center;}
-.db-row::before{content:'';position:absolute;left:1%;right:1%;top:50%;height:1px;
-  background:linear-gradient(90deg,rgba(251,191,36,0.05),rgba(251,191,36,0.45) 15%,rgba(251,191,36,0.45) 85%,rgba(251,191,36,0.05));}
-.db-col{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
-.db-val{font-size:13px;font-weight:800;color:#ffd98a;white-space:nowrap;}
-.db-dot{width:10px;height:10px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.55);flex:none;}
-.db-dot.today{background:#34d399;box-shadow:0 0 9px rgba(52,211,153,.7);animation:pulse 1.8s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-.db-lbl{font-size:11px;font-weight:700;color:#7f93b3;letter-spacing:.3px;white-space:nowrap;}
-.db-lbl.today{color:#34d399;}
-`;
-
-const DAILY_HTML = `
-<div class="db">
-  <span class="db-title">Geracao Diaria</span>
-  <div class="db-divider"></div>
-  <div class="db-row" id="db-row"></div>
-</div>
-`;
-
-const DAILY_ONINIT = GLOBAL_BG_JS;
-
-const DAILY_ONRENDER = HELPERS + `
-try {
-var numFields = hg_allNumericFields();
-var timeFields = hg_allTimeFields();
-var dayVals = hg_values(numFields[0]);
-var tVals = hg_values(timeFields[0]);
-var rowEl = htmlNode.getElementById('db-row');
-if (rowEl) {
-  rowEl.innerHTML = '';
-  var byDay = {};
-  for (var i = 0; i < dayVals.length; i++) {
-    if (dayVals[i] == null || isNaN(dayVals[i])) continue;
-    var tms = tVals[i];
-    var dte = new Date(tms);
-    var key = dte.getFullYear() + '-' + dte.getMonth() + '-' + dte.getDate();
-    if (!byDay[key]) { byDay[key] = { max: dayVals[i], t: tms }; }
-    else {
-      if (dayVals[i] > byDay[key].max) byDay[key].max = dayVals[i];
-      if (tms > byDay[key].t) byDay[key].t = tms;
-    }
-  }
-  var dayKeys = Object.keys(byDay).sort(function (a, b) { return byDay[a].t - byDay[b].t; });
-  dayKeys = dayKeys.slice(-7);
-  var now = new Date();
-  var todayKey = now.getFullYear() + '-' + now.getMonth() + '-' + now.getDate();
-  var pad0 = function (n) { return (n < 10 ? '0' : '') + n; };
-  dayKeys.forEach(function (k) {
-    var day = byDay[k];
-    var isToday = (k === todayKey);
-    var col = document.createElement('div'); col.className = 'db-col';
-    var valEl = document.createElement('div'); valEl.className = 'db-val';
-    var fmt = hg_fmtEnergy(day.max);
-    valEl.textContent = fmt.text + ' ' + fmt.unit;
-    var dotEl = document.createElement('div'); dotEl.className = 'db-dot' + (isToday ? ' today' : '');
-    var lblEl = document.createElement('div'); lblEl.className = 'db-lbl' + (isToday ? ' today' : '');
-    var dd = new Date(day.t);
-    lblEl.textContent = isToday ? 'HOJE' : (pad0(dd.getDate()) + '/' + pad0(dd.getMonth() + 1));
-    col.appendChild(valEl);
-    col.appendChild(dotEl);
-    col.appendChild(lblEl);
-    rowEl.appendChild(col);
-  });
 }
 } catch (e) {}
 `;
@@ -839,19 +804,12 @@ for (const y of rowYs) {
   }
 }
 
-// Daily totals (horizontal dot-timeline): Energy Generated Day, fixed 7-day window, full width
-panels.push(htmlPanel(++id, { x: 0, y: 20, w: 24, h: 2 }, [
-  zabbixTarget('A', 'Energy Generated Day', '/.*/', { sumSeries: true }),
-], {
-  html: DAILY_HTML, css: DAILY_CSS, onInit: DAILY_ONINIT, onRender: DAILY_ONRENDER,
-  customProperties: {}, timeFrom: '7d',
-}));
-
-// Weekly chart: Total Power Generated (line), fixed 7-day window, full width
-panels.push(htmlPanel(++id, { x: 0, y: 22, w: 24, h: 7 }, [
+// Energy per Week: daily total cards + weekly power line, one panel, fixed 7-day window, full width
+panels.push(htmlPanel(++id, { x: 0, y: 20, w: 24, h: 9 }, [
   zabbixTarget('A', 'Power Generated', '/.*/', { sumSeries: true }),
+  zabbixTarget('B', 'Energy Generated Day', '/.*/', { sumSeries: true }),
 ], {
-  html: WEEKLY_HTML, css: WEEKLY_CSS, onInit: WEEKLY_ONINIT, onRender: WEEKLY_ONRENDER,
+  html: EW_HTML, css: EW_CSS, onInit: EW_ONINIT, onRender: EW_ONRENDER,
   customProperties: {}, timeFrom: '7d',
 }));
 
