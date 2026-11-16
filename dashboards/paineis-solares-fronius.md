@@ -88,10 +88,13 @@ horizontal, por pedido do usuário na v10), barra de carga com gradiente contín
 (sem degraus) e gráfico de série temporal com tooltip/hover e eixo de tempo
 automático (múltiplas marcações, não só início/fim).
 
-### Painel semanal (novo na v10)
+### Painel semanal (novo na v10, com barras diárias desde a v11)
 
-- Mesma query do KPI "Total Power Generated" (`Power Generated`, host `/.*/`,
-  `sumSeries()`), mas como série temporal completa (não só último valor).
+- Query A: mesma do KPI "Total Power Generated" (`Power Generated`, host `/.*/`,
+  `sumSeries()`), mas como série temporal completa (não só último valor) — vira a
+  linha/área do gráfico.
+- Query B (desde a v11): `Energy Generated Day`, host `/.*/`, `sumSeries()` — usada
+  só pelas barras diárias, não pela linha.
 - **Intervalo de tempo fixo**, independente do seletor global do dashboard: usa o
   campo `panel.timeFrom = "7d"` do schema do Grafana (override de "tempo relativo"
   por painel) — equivalente a `from=now-7d, to=now` só para este painel. O
@@ -107,6 +110,32 @@ automático (múltiplas marcações, não só início/fim).
   a label do tooltip mostra data+hora (`DD/MM HH:MM`) em vez de só `HH:MM`, já que o
   intervalo cobre vários dias.
 
+#### Barras diárias (v11)
+
+Linha de 7 barras acima do gráfico de linha, uma por dia dos últimos 7 dias
+(incluindo hoje, parcial), mostrando o total gerado naquele dia:
+
+- Algoritmo: agrupa os pontos da query B (`Energy Generated Day`, que reseta a cada
+  meia-noite e sobe ao longo do dia) por **dia calendário local** (`getFullYear()
+  +'-'+getMonth()+'-'+getDate()` do timestamp de cada ponto) e pega o **valor
+  máximo** de cada grupo — esse máximo é o total gerado naquele dia. Pega só os
+  últimos 7 dias encontrados (`.slice(-7)`), ordenados por tempo.
+- O dia de hoje (comparado com `new Date()`) mostra a label **"HOJE"** em vez da
+  data, e naturalmente aparece com uma barra menor (total parcial, ainda subindo).
+- Altura de cada barra é relativa ao maior dia do conjunto (`dia.max / maiorDia *
+  100`), não a uma escala fixa — então a barra mais alta do grupo de 7 dias sempre
+  bate no topo.
+- **Validado contra os dados reais** antes de publicar (ver
+  `scripts/paineis-solares-fronius/mock_weekly.js`): os 7 valores ficaram entre
+  1,22 e 1,57 MWh/dia (mais "HOJE" parcial em 342 kWh), batendo com uma conta
+  cruzada feita a partir do delta diário do contador `Energy Generated Total`
+  (~1,3-1,8 MWh/dia) — confirma que não é um artefato de agregação do Zabbix, é a
+  geração real (10 inversores × ~27,3kW × ~5-6h de sol pico/dia).
+- **Não aumentou a altura do painel** (continua `h=6`, mesma caixa de antes): o
+  gráfico de linha (`.wksparkwrap`, `flex:1`) encolheu para abrir espaço pras
+  barras (`.wkbars`, altura fixa de 60px) — por pedido explícito do usuário de não
+  exceder o tamanho de página já usado.
+
 ## Script gerador
 
 - Caminho: `../scripts/paineis-solares-fronius/generate_dashboard.js`
@@ -117,7 +146,7 @@ automático (múltiplas marcações, não só início/fim).
   sintaxe de todo `onInit`/`onRender` gerado) e `mock_weekly.js` (exemplo de
   harness de mock usado pra validar o painel semanal antes de publicar — ver
   padrão de teste no `STANDARDS.md`).
-- Um snapshot do dashboard tal como publicado na v10 está salvo em
+- Um snapshot do dashboard tal como publicado na v11 está salvo em
   `../scripts/paineis-solares-fronius/last-deployed-snapshot.json` — útil como
   referência/rollback e como "backup bruto" de entrada pra próxima geração (os
   metadados do dashboard — título, uid, id, tempo, refresh — vêm dali; só os
@@ -182,9 +211,14 @@ automático (múltiplas marcações, não só início/fim).
      (`linear-gradient(90deg,#f87171 0%,#fbbf24 50%,#34d399 100%)`) — mudança de
      padrão compartilhado, já refletida no `STANDARDS.md`.
 
+- **v11**: adicionadas as barras diárias no painel semanal (ver seção acima) —
+  pedido pra complementar a curva de linha com "quanto foi gerado por dia" de
+  forma explícita. Mesma caixa/posição do painel (`y=23,h=6`), sem crescer a
+  página.
+
 ## Pendências / próximos passos conhecidos
 
-Nenhuma pendência em aberto registrada após a v10 — o usuário ainda não confirmou
-visualmente esta rodada (layout horizontal dos cards, painel semanal novo, gradiente
-contínuo). Confirmar com ele antes de considerar esta versão definitivamente
-estável, e atualizar esta seção (ou movê-la para "Histórico") assim que ele validar.
+Nenhuma pendência em aberto registrada após a v11 — o usuário ainda não confirmou
+visualmente esta rodada (barras diárias no painel semanal). Confirmar com ele antes
+de considerar esta versão definitivamente estável, e atualizar esta seção (ou
+movê-la para "Histórico") assim que ele validar.

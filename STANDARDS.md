@@ -202,6 +202,34 @@ Ao formatar rótulos de eixo/tooltip para esses painéis, trocar o formato de
 ultrapassar ~1,5 dia — caso contrário as marcações de dias diferentes ficam
 idênticas (todas mostrando só a hora).
 
+## Agregando um contador que reseta diariamente (total por dia)
+
+Para mostrar "quanto foi gerado/consumido/etc. em cada um dos últimos N dias" a
+partir de um item Zabbix que **reseta à meia-noite e sobe ao longo do dia** (ex.:
+`Energy Generated Day`), não dá pra simplesmente ler o último valor — é preciso
+agrupar os pontos da série por dia-calendário local e pegar o **valor máximo** de
+cada grupo (esse máximo é o total daquele dia; o dia corrente aparece com um total
+parcial, ainda subindo):
+
+```js
+var byDay = {};
+for (var i = 0; i < vals.length; i++) {
+  if (vals[i] == null || isNaN(vals[i])) continue;
+  var d = new Date(times[i]);
+  var key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+  if (!byDay[key]) byDay[key] = { max: vals[i], t: times[i] };
+  else { if (vals[i] > byDay[key].max) byDay[key].max = vals[i]; if (times[i] > byDay[key].t) byDay[key].t = times[i]; }
+}
+var days = Object.keys(byDay).sort(function(a,b){ return byDay[a].t - byDay[b].t; }).slice(-7);
+```
+
+**Sempre validar o resultado antes de publicar** comparando com o delta do contador
+*acumulado/vida-útil* equivalente (se existir), ex.: `total_dia_2 - total_dia_1`
+usando o item "Total" em vez do item "Day" — os dois devem bater na mesma ordem de
+grandeza. Isso pegou uma suspeita de bug (valores "grandes demais") que na verdade
+era só uma referência mental errada do que é um dia "completo" vs. uma leitura
+parcial de manhã (ver changelog do dashboard Fronius, v11).
+
 ## Cálculo de tamanho de fonte para TV (método AVIXA)
 
 Sempre que for preciso definir/ajustar tamanho de fonte para exibição em TV,

@@ -561,16 +561,22 @@ const WEEKLY_CSS = `
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 .wktitle{font-size:16px;font-weight:800;letter-spacing:.6px;color:#dce9ff;text-transform:uppercase;}
 .wksub{font-size:12px;font-weight:600;color:#7f93b3;letter-spacing:.4px;}
+.wkbars{display:flex;align-items:flex-end;gap:10px;height:60px;flex:none;margin-bottom:6px;}
+.wkbarcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px;}
+.wkbarval{font-size:10.5px;font-weight:700;color:#ffd98a;white-space:nowrap;}
+.wkbar{width:56%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,#fbbf24,#9a6417);min-height:3px;transition:height .4s ease;}
+.wkbarlbl{font-size:9.5px;font-weight:700;color:#7f93b3;letter-spacing:.3px;white-space:nowrap;}
 .wksparkwrap{position:relative;flex:1;min-height:0;}
 .wkspark{width:100%;height:100%;display:block;}
 .wkvline{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.4);display:none;pointer-events:none;}
 .wktip{position:absolute;top:4px;transform:translateX(-50%);background:rgba(4,9,18,0.95);border:1px solid rgba(96,165,250,0.35);border-radius:6px;padding:5px 11px;font-size:13px;font-weight:700;color:#fff;white-space:nowrap;display:none;pointer-events:none;z-index:2;}
-.wkaxis{display:flex;justify-content:space-between;font-size:12px;color:#6f84a8;margin-top:6px;flex:none;font-weight:600;}
+.wkaxis{display:flex;justify-content:space-between;font-size:12px;color:#6f84a8;margin-top:5px;flex:none;font-weight:600;}
 `;
 
 const WEEKLY_HTML = `
 <div class="wk">
   <div class="wkhead"><span class="wkdot"></span><span class="wktitle">Total Power Generated</span><span class="wksub">&mdash; ULTIMOS 7 DIAS</span></div>
+  <div class="wkbars" id="wk-bars"></div>
   <div class="wksparkwrap" id="wk-sparkwrap">
     <svg class="wkspark" id="wk-spark" viewBox="0 0 1600 220" preserveAspectRatio="none">
       <defs>
@@ -629,11 +635,54 @@ try {
 var numFields = hg_allNumericFields();
 var timeFields = hg_allTimeFields();
 var vals = hg_values(numFields[0]);
+var dayVals = hg_values(numFields[1]);
 var tVals = hg_values(timeFields[0]);
 var points = [];
 for (var i = 0; i < vals.length; i++) {
   if (vals[i] != null && !isNaN(vals[i])) points.push({ t: tVals[i], v: vals[i] });
 }
+
+var barsEl = htmlNode.getElementById('wk-bars');
+if (barsEl) {
+  barsEl.innerHTML = '';
+  var byDay = {};
+  for (var bi = 0; bi < dayVals.length; bi++) {
+    if (dayVals[bi] == null || isNaN(dayVals[bi])) continue;
+    var tms = tVals[bi];
+    var dte = new Date(tms);
+    var key = dte.getFullYear() + '-' + dte.getMonth() + '-' + dte.getDate();
+    if (!byDay[key]) { byDay[key] = { max: dayVals[bi], t: tms }; }
+    else {
+      if (dayVals[bi] > byDay[key].max) byDay[key].max = dayVals[bi];
+      if (tms > byDay[key].t) byDay[key].t = tms;
+    }
+  }
+  var dayKeys = Object.keys(byDay).sort(function (a, b) { return byDay[a].t - byDay[b].t; });
+  dayKeys = dayKeys.slice(-7);
+  var maxDay = 0;
+  dayKeys.forEach(function (k) { if (byDay[k].max > maxDay) maxDay = byDay[k].max; });
+  var now = new Date();
+  var todayKey = now.getFullYear() + '-' + now.getMonth() + '-' + now.getDate();
+  var pad0 = function (n) { return (n < 10 ? '0' : '') + n; };
+  dayKeys.forEach(function (k) {
+    var day = byDay[k];
+    var pct = maxDay > 0 ? (day.max / maxDay) * 100 : 0;
+    var col = document.createElement('div'); col.className = 'wkbarcol';
+    var valEl = document.createElement('div'); valEl.className = 'wkbarval';
+    var fmt = hg_fmtEnergy(day.max);
+    valEl.textContent = fmt.text + ' ' + fmt.unit;
+    var barEl = document.createElement('div'); barEl.className = 'wkbar';
+    barEl.style.height = Math.max(3, pct) + '%';
+    var lblEl = document.createElement('div'); lblEl.className = 'wkbarlbl';
+    var dd = new Date(day.t);
+    lblEl.textContent = (k === todayKey) ? 'HOJE' : (pad0(dd.getDate()) + '/' + pad0(dd.getMonth() + 1));
+    col.appendChild(valEl);
+    col.appendChild(barEl);
+    col.appendChild(lblEl);
+    barsEl.appendChild(col);
+  });
+}
+
 var pathLine = htmlNode.getElementById('wk-line');
 var pathArea = htmlNode.getElementById('wk-area');
 var svgNode = htmlNode.getElementById('wk-spark');
@@ -755,9 +804,10 @@ for (const y of rowYs) {
   }
 }
 
-// Weekly chart: Total Power Generated, fixed 7-day window, full width
+// Weekly chart: Total Power Generated (line) + daily totals (bars), fixed 7-day window, full width
 panels.push(htmlPanel(++id, { x: 0, y: 23, w: 24, h: 6 }, [
   zabbixTarget('A', 'Power Generated', '/.*/', { sumSeries: true }),
+  zabbixTarget('B', 'Energy Generated Day', '/.*/', { sumSeries: true }),
 ], {
   html: WEEKLY_HTML, css: WEEKLY_CSS, onInit: WEEKLY_ONINIT, onRender: WEEKLY_ONRENDER,
   customProperties: {}, timeFrom: '7d',
