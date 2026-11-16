@@ -635,6 +635,40 @@ if (sparkwrap && !sparkwrap.__hgBound) {
 `;
 
 const EW_ONRENDER = HELPERS + `
+function hg_syncTodayCard(valEl) {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var rangeFrom = params.get('from') || 'now-6h';
+    var rangeTo = params.get('to') || 'now';
+    var body = {
+      queries: [{
+        refId: 'T',
+        datasource: { type: 'alexanderzobnin-zabbix-datasource', uid: 'fdfjaoiye7im8a' },
+        application: { filter: '' }, countTriggersBy: '', evaltype: '0',
+        functions: [{ added: true, def: { category: 'Aggregate', defaultParams: [], name: 'sumSeries', params: [] }, params: [], text: 'sumSeries()' }],
+        group: { filter: 'Fronius' }, host: { filter: '/.*/' }, item: { filter: 'Energy Generated Day' },
+        itemTag: { filter: '' }, macro: { filter: '' },
+        options: { count: false, disableDataAlignment: false, showDisabledItems: false, skipEmptyValues: false, useTrends: 'default', useZabbixValueMapping: false },
+        proxy: { filter: '' }, queryType: '0', resultFormat: 'time_series', schema: 12,
+        table: { skipEmptyValues: false }, tags: { filter: '' }, textFilter: '', trigger: { filter: '' }
+      }],
+      from: rangeFrom, to: rangeTo
+    };
+    fetch('/api/ds/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (json) {
+        var fr = json && json.results && json.results.T && json.results.T.frames && json.results.T.frames[0];
+        if (!fr) return;
+        var valueIdx = fr.schema.fields.findIndex(function (f) { return f.type === 'number'; });
+        if (valueIdx < 0) return;
+        var vals = fr.data.values[valueIdx] || [];
+        var last = null;
+        for (var i = vals.length - 1; i >= 0; i--) { if (vals[i] != null && !isNaN(vals[i])) { last = vals[i]; break; } }
+        if (last != null && valEl) { var fmt = hg_fmtEnergy(last); valEl.textContent = fmt.text + ' ' + fmt.unit; }
+      })
+      .catch(function () {});
+  } catch (e) {}
+}
 try {
 var numFields = hg_allNumericFields();
 var timeFields = hg_allTimeFields();
@@ -680,6 +714,7 @@ if (daysEl) {
     card.appendChild(lblEl);
     card.appendChild(valEl);
     daysEl.appendChild(card);
+    if (isToday) { hg_syncTodayCard(valEl); }
   });
 }
 

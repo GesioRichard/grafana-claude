@@ -134,6 +134,33 @@ batendo com uma conta cruzada feita a partir do delta diário do contador
 agregação do Zabbix, é a geração real (10 inversores × ~27,3kW × ~5-6h de sol
 pico/dia).
 
+#### Sincronização do card "HOJE" com o KPI (v14)
+
+O card "HOJE" vinha de **`byDay[hoje].max`** extraído da mesma query de 7 dias
+(`B`, resolução de *trends*/hora em hora) usada pelos outros 6 dias — mas pra hoje
+especificamente isso fica **defasado** em relação ao KPI "Total Energy Generated
+Day" (que usa o intervalo de tempo global do dashboard, hoje `now-6h`, em
+resolução *raw/history*, muito mais fresca). Confirmado com números reais: a query
+de 7 dias trazia "518 kWh" pra hoje enquanto a mesma métrica no intervalo `now-6h`
+já estava em "656 kWh" — quase 25% de diferença, só por causa da resolução.
+
+**Correção**: depois de desenhar o card "HOJE" com o valor (defasado) da query de 7
+dias, o `onRender` dispara um `fetch('/api/ds/query', ...)` extra, direto pra API do
+próprio Grafana (mesma sessão/cookie do navegador, sem credenciais novas), repetindo
+exatamente a mesma query do KPI (`Energy Generated Day`, `sumSeries()`,
+`host=/.*/`) — mas com o **intervalo de tempo global real do dashboard**, lido da
+URL (`?from=...&to=...`) via `URLSearchParams(window.location.search)`, com
+fallback pro padrão salvo (`now-6h`/`now`) se a URL não tiver esses parâmetros. Ao
+responder, substitui o texto do card "HOJE" pelo valor fresco — ficando igual ao
+KPI, independente de qual intervalo de tempo o usuário tiver selecionado no
+dashboard.
+
+Isso é um padrão novo (chamar a API do Grafana via `fetch` direto de dentro de um
+painel HTML Graphics, pra contornar o fato de `panel.timeFrom` valer pro painel
+inteiro e não dar pra misturar janelas de tempo diferentes entre queries do mesmo
+painel) — documentado em `STANDARDS.md` pra reaproveitar se aparecer caso parecido
+em outro dashboard.
+
 ## Script gerador
 
 - Caminho: `../scripts/paineis-solares-fronius/generate_dashboard.js`
@@ -240,9 +267,16 @@ pico/dia).
   do painel combinado (`9`) é exatamente a soma dos dois painéis anteriores
   (`2+7`), então o teto de 29 continua intacto.
 
+- **v14**: usuário confirmou que os valores dos cards diários aparecem legíveis
+  (v13 ok nesse ponto), mas notou que o card "HOJE" não batia com o valor do KPI
+  "Total Energy Generated Day" — pediu pra sincronizar, já que logicamente é a
+  mesma variável. Diagnosticado como diferença de resolução (trends/hora vs
+  raw/history do intervalo global) e corrigido com um `fetch` adicional pra API do
+  Grafana dentro do próprio painel (ver seção "Sincronização do card HOJE" acima).
+
 ## Pendências / próximos passos conhecidos
 
-Nenhuma pendência em aberto registrada após a v13 — o usuário ainda não confirmou
-visualmente esta rodada (painel único "Energy per Week" com cards diários + linha
-semanal). Confirmar com ele antes de considerar esta versão definitivamente
-estável, e atualizar esta seção (ou movê-la para "Histórico") assim que ele validar.
+Nenhuma pendência em aberto registrada após a v14 — o usuário ainda não confirmou
+visualmente esta rodada (card "HOJE" sincronizado com o KPI). Confirmar com ele
+antes de considerar esta versão definitivamente estável, e atualizar esta seção (ou
+movê-la para "Histórico") assim que ele validar.

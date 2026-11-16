@@ -263,6 +263,30 @@ pra não repetir as tentativas rejeitadas em outro dashboard:
 legível ou a preferida — confirme o resultado real com o usuário antes de assumir
 que uma versão mais enxuta é automaticamente melhor.
 
+## Sincronizar um valor com o intervalo de tempo global quando o painel usa `timeFrom`
+
+`panel.timeFrom` (ver seção acima) vale pra TODAS as queries daquele painel — não dá
+pra ter uma query no intervalo global do dashboard e outra numa janela fixa (ex.:
+7 dias) no mesmo painel. Isso é um problema quando um elemento dentro desse painel
+precisa mostrar o mesmo número que outro painel do dashboard (que usa o intervalo
+global) está mostrando — ex.: um card "hoje" dentro de um gráfico semanal que
+deveria bater com um KPI "hoje" que fica no topo do dashboard. Datasources como o
+Zabbix legado também podem responder com **resolução diferente** (trends/agregado
+por hora vs. raw/history) dependendo do tamanho da janela pedida, então mesmo a
+"mesma" métrica pode vir com um valor levemente defasado se a janela for maior.
+
+**Solução**: dentro do `onRender` desse elemento específico, disparar um
+`fetch('/api/ds/query', {...})` direto pra API do próprio Grafana (mesma
+sessão/cookie do navegador — `credentials: 'same-origin'`, sem precisar de token),
+repetindo a query exata do painel que você quer igualar, mas com o intervalo de
+tempo lido da URL atual (`new URLSearchParams(window.location.search).get('from'
+| 'to')`, com fallback pro padrão salvo do dashboard se a URL não tiver esses
+parâmetros) em vez do `timeFrom` fixo do painel. Ao responder, só substitui o texto
+do elemento — o resto do painel (gráfico, outros cards históricos) continua usando
+a query com `timeFrom` fixo normalmente. `fetch`/`window`/`URLSearchParams` são
+globais de navegador normais aqui, não precisam ser passados como parâmetro (ver
+seção do plugin acima — `document`/`window` já funcionam sem sandboxing).
+
 ## Cálculo de tamanho de fonte para TV (método AVIXA)
 
 Sempre que for preciso definir/ajustar tamanho de fonte para exibição em TV,
