@@ -13,6 +13,16 @@ dashboard diga o contrário.
 > (nova `version` no Grafana) ou a identidade visual mudar, **atualize este arquivo
 > (se for mudança de padrão geral) e o markdown do dashboard em `dashboards/`** antes
 > de encerrar a tarefa. Ver `CLAUDE.md` na raiz.
+>
+> ⚠️ **Limite de grade é intocável.** Cada dashboard tem um teto fixo de linhas×colunas
+> definido pelo tamanho físico da tela onde ele é exibido (sem rolagem). Para o
+> dashboard Fronius esse teto é **24 colunas × 29 linhas** — ver
+> `dashboards/paineis-solares-fronius.md`. **Qualquer pedido de painel novo, gráfico
+> adicional ou redistribuição de layout precisa primeiro verificar esse teto e
+> encaixar a mudança dentro dele** (reduzindo a altura de outras seções se
+> necessário), nunca excedendo o total. Antes de publicar, o script gerador deve
+> imprimir a soma final de `gridPos` e conferir contra o teto documentado daquele
+> dashboard (ver `console.log` de bounding box em `generate_dashboard.js`).
 
 ## Instância Grafana
 
@@ -229,6 +239,20 @@ usando o item "Total" em vez do item "Day" — os dois devem bater na mesma orde
 grandeza. Isso pegou uma suspeita de bug (valores "grandes demais") que na verdade
 era só uma referência mental errada do que é um dia "completo" vs. uma leitura
 parcial de manhã (ver changelog do dashboard Fronius, v11).
+
+## Totais por período em pouco espaço vertical: linha de pontos horizontal
+
+Quando o espaço vertical disponível é curto demais para um gráfico de barras (ou o
+usuário simplesmente não quer barras — ver changelog do dashboard Fronius, v12: o
+usuário rejeitou explicitamente barras verticais por "dividir" o gráfico de linha
+abaixo), uma alternativa compacta e com bom acabamento visual é uma **linha de
+pontos horizontal**: uma linha fina contínua atravessando o painel, com um ponto
+(`.db-dot`) por item (ex.: por dia), valor acima e rótulo (data, "HOJE" etc.) abaixo
+de cada ponto. Cabe em muito pouca altura (testado com painel de 2 linhas de grade,
+~68px) porque não precisa de uma escala de altura proporcional ao valor — só texto +
+um marcador fixo. Destaque o item "atual/parcial" (ex.: hoje) com uma cor diferente
+(verde, consistente com o indicador "ao vivo" do resto do dashboard) e animação de
+pulso, em vez de deixá-lo visualmente igual aos itens completos.
 
 ## Cálculo de tamanho de fonte para TV (método AVIXA)
 
