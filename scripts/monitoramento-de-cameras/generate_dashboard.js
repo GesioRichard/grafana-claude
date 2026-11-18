@@ -271,14 +271,14 @@ function nvrCardComponent(nvr) {
 .nvr-head{display:flex;align-items:center;gap:10px;flex:none;}
 .nvr-dot{width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;flex:none;animation:pulse 1.8s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
-.nvr-title{font-size:22px;font-weight:800;letter-spacing:.6px;color:#fff;white-space:nowrap;}
-.nvr-oo{display:flex;align-items:baseline;gap:10px;margin-left:auto;flex:none;}
+.nvr-title{font-size:22px;font-weight:800;letter-spacing:.6px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.nvr-oo{display:flex;align-items:baseline;gap:9px;margin-left:auto;flex:none;}
 .nvr-oo-item{display:flex;align-items:baseline;gap:4px;white-space:nowrap;}
-.nvr-oo-val{font-size:19px;font-weight:800;}
-.nvr-oo-lbl{font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#89a0c4;}
+.nvr-oo-val{font-size:27px;font-weight:800;}
+.nvr-oo-lbl{font-size:12px;font-weight:800;letter-spacing:.3px;color:#89a0c4;}
 .nvr-oo-item.online .nvr-oo-val{color:#34d399;}
 .nvr-oo-item.offline .nvr-oo-val{color:#f87171;}
-.nvr-oo-sep{color:rgba(96,165,250,0.3);font-size:16px;}
+.nvr-oo-sep{color:rgba(96,165,250,0.3);font-size:18px;}
 .nvr-bars{display:flex;gap:16px;flex:1;align-items:center;}
 .nvr-barcell{flex:1;display:flex;flex-direction:column;gap:6px;}
 .nvr-bar-row{display:flex;justify-content:space-between;align-items:baseline;}
@@ -299,9 +299,9 @@ function nvrCardComponent(nvr) {
   <div class="nvr-head">
     <span class="nvr-dot"></span><span class="nvr-title">${nvr.host}</span>
     <div class="nvr-oo">
-      <span class="nvr-oo-item online"><span class="nvr-oo-val" id="v-online">--</span><span class="nvr-oo-lbl">ONLINE</span></span>
+      <span class="nvr-oo-item online"><span class="nvr-oo-val" id="v-online">--</span><span class="nvr-oo-lbl">ON</span></span>
       <span class="nvr-oo-sep">/</span>
-      <span class="nvr-oo-item offline"><span class="nvr-oo-val" id="v-offline">--</span><span class="nvr-oo-lbl">OFFLINE</span></span>
+      <span class="nvr-oo-item offline"><span class="nvr-oo-val" id="v-offline">--</span><span class="nvr-oo-lbl">OFF</span></span>
     </div>
   </div>
   <div class="nvr-bars">

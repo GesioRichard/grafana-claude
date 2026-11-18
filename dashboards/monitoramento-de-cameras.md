@@ -374,8 +374,30 @@ Colunas por NVR: NVR01-04 w=5 (x=0,5,10,15), NVR05 w=4 (x=20) — total 24.
 
 Publicado como `version: 5` (16 painéis, mesma contagem da v4).
 
-**Pendências / a confirmar com o usuário após ver na TV real**:
-- Legibilidade real dos novos pontos de status na tabela e do card
-  reorganizado — primeira vez vistos numa tela real.
-- Confirmar que o teto 24×29 realmente se aplica a esta TV (pendência antiga,
-  ainda não confirmada explicitamente pelo usuário).
+**Pendências da v5** (resolvida a primeira na v6 abaixo; a 2ª continua em
+aberto): legibilidade do card reorganizado; teto 24×29 não confirmado.
+
+### v6 — 2026-11-18
+
+**Por quê**: usuário confirmou visualmente a v5 (print real da TV) — layout
+geral aprovado, mas o número de Online/Offline no card ficou pequeno demais, e
+no NVR 05 (coluna mais estreita, `w=4`) o texto "OFFLINE" estava sendo cortado
+(`10 OFFLIN...`). Pediu aumentar a fonte do número e, se precisar de espaço,
+trocar "ONLINE"/"OFFLINE" por "ON"/"OFF".
+
+**O que mudou** (só CSS/texto, nenhuma query ou lógica de dado mudou):
+- `.nvr-oo-val` (o número): `19px` → `27px`.
+- Rótulo "ONLINE"/"OFFLINE" → **"ON"/"OFF"**, com a fonte do rótulo também
+  um pouco maior (`10.5px` → `12px`) já que sobrou espaço.
+- `.nvr-title` ganhou `overflow:hidden;text-overflow:ellipsis;min-width:0` —
+  se algum dia o nome do NVR for maior, ele trunca com reticências **antes**
+  de espremer o cluster Online/Offline, que agora tem prioridade de espaço
+  garantida (`flex:none` continua no `.nvr-oo`).
+
+Publicado como `version: 6` (16 painéis, só CSS mudou — não precisou
+revalidar com `/api/ds/query`/`mock_panel.js`, já que a lógica de dado do
+card não foi tocada).
+
+**Pendências**: confirmar visualmente que o corte do NVR 05 foi resolvido;
+teto 24×29 ainda não confirmado explicitamente pelo usuário (pendência
+antiga, carregada desde a v2).
