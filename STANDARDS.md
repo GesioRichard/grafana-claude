@@ -90,7 +90,25 @@ dashboard diga o contrário.
    dashboard Fronius como modelo de estrutura e reaproveitando os componentes
    visuais já prontos (header, card com barra de carga em gradiente, sparkline
    com hover, etc. — ver "Identidade visual" abaixo) em vez de reinventar do
-   zero a cada dashboard novo.
+   zero a cada dashboard novo. **Checklist de nível de acabamento** (a v3 do
+   dashboard de Câmeras ficou "abaixo do nível do Fronius" por pular estes
+   pontos — não repetir):
+   - **Cabeçalho global obrigatório**, 1 painel só, full-width, no topo do
+     dashboard — o mesmo design do Fronius (logo, marca, bloco de título,
+     indicador ao vivo, intervalo de tempo, taxa de atualização), só muda o
+     texto do título. Um título por seção/coluna **não substitui** isso.
+   - **Unificar métricas relacionadas de uma mesma entidade num único card**,
+     não fragmentar em vários mini-painéis lado a lado (ex.: um host com
+     4-6 métricas relacionadas = 1 painel com layout interno organizado, não
+     4-6 painéis separados). Dê ao card espaço de grid suficiente pra ficar
+     com respiro — não force o mínimo técnico que cabe.
+   - **Preservar o `gridPos`/layout do dashboard anterior não é obrigatório**
+     quando a reclamação é sobre a organização visual, não só a tecnologia de
+     renderização — redistribua o espaço livremente se o resultado ficar
+     melhor (dentro do teto de grid).
+   - Pra listas de status (tabela de itens com estado), usar **badge sólido
+     colorido** por item, não fundo da linha inteira tintado/translúcido —
+     fica com contraste mais fraco numa TV vista de longe.
 6. Seguir os passos 3-7 de "Alterar um dashboard existente" acima (validar,
    publicar, pedir confirmação visual, documentar, commitar).
 7. Criar `dashboards/<nome-dashboard>.md` do zero (estrutura dos exemplos
@@ -256,6 +274,15 @@ precisar saber qual é a real.
   - Tooltip + linha de cursor ao passar o mouse (ver padrão de hover abaixo).
   - Eixo de tempo com **múltiplas marcações automáticas** (nunca só início/fim) —
     ver algoritmo de "nice step" abaixo.
+- **Listas de status (ex.: tabela de câmeras/dispositivos online/offline)**:
+  cada linha mostra o nome + um **badge sólido** colorido à direita
+  (`border-radius:999px`, fundo verde/vermelho/cinza **sólido**, texto escuro
+  em caixa alta pequena) — não um fundo translúcido na linha inteira. Fundo de
+  linha tintado em baixa opacidade (ex.: `rgba(verde,0.1)`) fica com contraste
+  fraco demais pra uma TV vista de longe; o badge sólido é o que dá o "golpe de
+  vista" rápido de verde/vermelho que uma lista de status precisa. Zebra sutil
+  (`rgba(255,255,255,0.02)` nas linhas pares) e uma borda fina entre linhas
+  ajudam a separar visualmente sem precisar de cor de fundo forte.
 
 ### Padrão de hover em gráfico custom (sem biblioteca)
 
@@ -400,12 +427,17 @@ espaço disponível em cada painel (ver changelog em
 > dashboard de Monitoramento de Câmeras foi feita 100% com painéis nativos do
 > Grafana (`stat`, `bargauge`, `table`, `state-timeline`). O usuário corrigiu:
 > **HTML Graphics é obrigatório em todo dashboard novo** (ver "Criar um dashboard
-> novo do zero" no topo deste arquivo). O dashboard de Câmeras **já foi
-> reconstruído em HTML Graphics na v3** — ver `dashboards/monitoramento-de-cameras.md`
-> para a versão atual. Esta seção fica só como registro histórico de por que a
-> v1→v2 foi feita daquele jeito e o que se aprendeu, caso ajude a entender
-> decisões antigas ou dado herdado (queries SQL/Zabbix continuam as mesmas,
-> só a renderização muda).
+> novo do zero" no topo deste arquivo). A v3 trocou a tecnologia (HTML Graphics)
+> mas **manteve o mesmo layout fragmentado da v2** (4 mini-painéis por NVR, sem
+> cabeçalho global, lista com fundo tintado, timeline em várias trilhas) — o
+> usuário rejeitou de novo, dessa vez por nível de acabamento abaixo do Fronius,
+> não pela tecnologia. **A v4 corrigiu isso** (cabeçalho global, 1 card unificado
+> por NVR, badges sólidos na lista, gráfico agregado em série temporal) — ver
+> `dashboards/monitoramento-de-cameras.md` para a versão atual e o checklist de
+> acabamento adicionado em "Criar um dashboard novo do zero" acima. Esta seção
+> fica só como registro histórico de por que a v1→v2 foi feita daquele jeito e o
+> que se aprendeu, caso ajude a entender decisões antigas ou dado herdado
+> (queries SQL/Zabbix continuam as mesmas desde a v1, só a renderização muda).
 
 Os gotchas de `refId` e o padrão de teste via `new Function(...)` descritos na
 seção do plugin acima **só se aplicam** a painéis que de fato usam HTML
@@ -425,29 +457,53 @@ painel nativo `bargauge` (`displayMode: "gradient"`) como atalho pra CPU/Memóri
 (ver "Identidade visual") é obrigatório, mesmo custando um pouco mais de código
 por painel.
 
-### Dado categórico em formato "longo" (abordagem nativa descontinuada + equivalente em HTML Graphics)
+### Dado categórico em formato "longo": agregar numa série única em vez de 1 linha por categoria
 
 Quando uma query SQL retorna dado em formato "longo" — uma linha por
-`(tempo, categoria, valor)`, ex.: `(TimestampStatus, Câmera, Status)` — a v2
-(nativa, descontinuada) do dashboard de Câmeras usava a transformação do
-Grafana **"Partition by values"** (`transformations: [{id:'partitionByValues',
-options:{fields:['Câmera'], keepFields:false, naming:{asLabels:false}}}]`) pra
-separar em uma série por câmera antes de passar pro `state-timeline`.
+`(tempo, categoria, valor)`, ex.: `(TimestampStatus, Câmera, Status)` — a
+tentação é desenhar **1 linha/faixa por categoria** (um state-timeline estilo
+Gantt, uma trilha horizontal por item). **Evite isso quando o número de
+categorias pode ser grande ou variável** (ex.: de 1 a 18 câmeras flagradas
+dependendo do NVR): numa TV, muitas trilhas finas empilhadas ficam ilegíveis, e
+o usuário explicitamente rejeitou esse formato no dashboard de Câmeras por
+"parecer gráfico de barras horizontais" (v3→v4).
 
-Em HTML Graphics não existe pipeline de transformação — o agrupamento é feito à
-mão no `onRender`, iterando os 3 campos da query (tempo, categoria, status) e
-acumulando num objeto `{ [categoria]: [{t, v}, ...] }`:
+**Prefira agregar numa única série temporal** — ex.: em vez de "uma trilha por
+câmera mostrando conectado/desconectado", uma linha só com "quantas câmeras
+estão offline em cada instante", no mesmo estilo de sparkline com hover do
+Fronius (`STANDARDS.md`, "Padrão de hover em gráfico custom"). O agrupamento é
+feito no `onRender`, varrendo os eventos em ordem cronológica e mantendo o
+estado de cada categoria pra computar a contagem agregada a cada mudança:
 
 ```js
-var byCategory = {};
-for (var i = 0; i < catVals.length; i++) {
-  var cat = catVals[i];
-  if (!byCategory[cat]) byCategory[cat] = [];
-  byCategory[cat].push({ t: tVals[i], v: statusVals[i] });
-}
+raw.sort(function (a, b) { return a.t - b.t; }); // [{t, cat, v}, ...]
+var state = {};
+var points = [];
+raw.forEach(function (p) {
+  state[p.cat] = p.v;
+  var affected = Object.keys(state).filter(function (c) { return state[c] === 0; });
+  points.push({ t: p.t, v: affected.length, cats: affected });
+});
 ```
 
-Cada chave de `byCategory` vira uma linha/faixa do timeline customizado (ver
-componente "state-timeline em HTML Graphics" em
-`dashboards/monitoramento-de-cameras.md`).
+Isso dá uma linha só, sempre legível **independente de quantas categorias
+existam**, e o `cats` de cada ponto ainda deixa investigar o detalhe (quais
+categorias especificamente) via tooltip no hover — sem precisar de uma trilha
+visual por categoria. Desenhe o path em **"step" (degraus)**, não interpolação
+direta ponto-a-ponto, já que é uma contagem discreta que muda em saltos, não
+uma grandeza contínua: para cada par de pontos consecutivos, vá até
+`(x_novo, y_antigo)` antes de subir/descer pra `(x_novo, y_novo)`.
+
+⚠️ **Cuidado com timestamps `NULL`** nesse tipo de query (uma categoria com
+nome mas sem valor correspondente, de um `LEFT JOIN` que não casou) — um `t`
+nulo quebra o `sort` numérico (`null` vira `0` numa subtração em JS) e pode
+jogar esse ponto pro início dos anos 1970, estourando o cálculo do eixo de
+tempo (`hg_niceTicks`) pra milhares de marcações. **Sempre filtre** `t == null
+|| isNaN(t)` antes de processar, e teste com o cenário de mais linhas de dado
+antes de publicar — foi exatamente assim que esse bug foi pego (câmera
+"Canal32" do NVR 05, ver `dashboards/monitoramento-de-cameras.md`).
+
+Se um dia for mesmo necessário mostrar o estado de cada categoria
+individualmente (não só o agregado), prefira uma **tabela/lista com badge por
+item** (ver seção de identidade visual) a um timeline multi-trilha.
 

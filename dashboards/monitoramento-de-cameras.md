@@ -15,15 +15,15 @@
 
 ## O que este dashboard mostra
 
-5 colunas, uma por NVR (`NVR 01` a `NVR 05`), cada uma com:
+**Cabeçalho global** (padrão TV ATALAIA, igual ao Fronius — só muda o título)
+no topo, seguido de 5 colunas, uma por NVR (`NVR 01` a `NVR 05`), cada uma com:
 
-1. Cabeçalho com o nome do NVR.
-2. Cards ONLINE/OFFLINE (câmeras conectadas/desconectadas) e DOWNLOAD/UPLOAD
-   (tráfego de rede do NVR).
-3. CPU e Memória do NVR.
-4. Tabela com todas as câmeras daquele NVR e o status atual (Online/Offline/Empty).
-5. Gráfico com as câmeras que caíram em algum momento das últimas 3h (ver seção
-   da query abaixo) — um "state timeline" customizado desde a v3.
+1. **Card unificado do NVR**: nome, ONLINE/OFFLINE (câmeras conectadas/
+   desconectadas), DOWNLOAD/UPLOAD (tráfego de rede) e barras de CPU/Memória —
+   tudo num painel só (desde a v4).
+2. Tabela com todas as câmeras daquele NVR e o status atual (Online/Offline/Empty).
+3. Gráfico de série temporal com o **número de câmeras offline ao longo das
+   últimas 3h** (agregado, não mais 1 trilha por câmera — desde a v4).
 
 ## Datasources
 
@@ -187,9 +187,16 @@ paleta/componentes já estabelecidos no dashboard Fronius.
 **O que mudou**: todos os 30 painéis foram reconstruídos como
 `gapit-htmlgraphics-panel`. **Nenhuma query SQL/Zabbix mudou** — extraídas uma
 vez do dashboard ao vivo (`query_templates.json`) e reaproveitadas tal qual; só
-a renderização mudou. Layout (posições/alturas) idêntico ao da v2 — a
-reclamação era sobre a tecnologia de renderização, não sobre a organização do
-espaço.
+a renderização mudou. Layout (posições/alturas) idêntico ao da v2.
+
+> ⚠️ **Essa suposição (layout da v2 já estava certo) estava errada** — o
+> usuário rejeitou a v3 de novo, dessa vez pelo nível de acabamento (sem
+> cabeçalho global, 4 mini-painéis fragmentados por NVR em vez de 1 card
+> unificado, lista de câmeras com contraste fraco, timeline em várias trilhas
+> parecendo "gráfico de barras horizontais"). **Ver v4 abaixo pra correção.**
+> Ficam as duas versões documentadas pra não repetir nenhuma das duas
+> tentativas erradas (v2: tecnologia nativa; v3: tecnologia certa, acabamento
+> abaixo do nível do Fronius).
 
 - **Cabeçalho NVR**: painel estático (sem query), título grande centralizado,
   fundo em gradiente navy igual aos cards do Fronius.
@@ -224,10 +231,86 @@ dos dois.
 
 Publicado como `version: 3` (30 painéis, mesmo `gridPos` da v2).
 
+**Pendências da v3** (superadas pela v4 abaixo, mantidas aqui só por registro
+histórico): altura da timeline pra NVR03/04/05, legibilidade da tabela e das
+trilhas por câmera.
+
+### v4 — 2026-11-18
+
+**Por quê**: o usuário comparou a v3 com o Fronius e achou o design "muito
+abaixo do nível" — pediu uma correção completa de identidade visual, não só de
+tecnologia (ver aviso na v3 acima). Pediu também pra eu revisar a documentação
+do projeto e remover/corrigir o que me levou a montar a v3 daquele jeito —
+ver as mudanças em `STANDARDS.md` (checklist de acabamento na seção "Criar um
+dashboard novo do zero", e a seção de dado categórico reescrita).
+
+**O que mudou** (16 painéis, de 30 na v3 — layout bem mais enxuto):
+
+- **Cabeçalho global** (novo, não existia nem na v2 nem na v3): 1 painel
+  full-width no topo, cópia do componente de cabeçalho do Fronius (logo,
+  "TV ATALAIA", bloco de título, indicador ao vivo, intervalo de tempo
+  calculado dinamicamente, taxa de atualização) — só o título mudou pra
+  "MONITORAMENTO DE CAMERAS" / "NVRs E CAMERAS". Refresh do chip fixado em
+  "1m" (o dashboard já usa `refresh=1m` na URL, diferente do Fronius que usa
+  5s).
+- **Card unificado por NVR** (substituiu os 4 mini-painéis fragmentados da
+  v3 — cabeçalho-por-NVR, online/offline, download/upload, CPU/memória):
+  1 painel só com datasource **mista** (`{type:'datasource',uid:'-- Mixed --'}`,
+  2 targets MySQL + 4 targets Zabbix no mesmo painel — testado via
+  `/api/ds/query` com as 6 queries juntas antes de publicar, igual a como o
+  próprio Grafana executaria). Layout interno: título com ponto "ao vivo" em
+  cima, 4 estatísticas (Online/Offline/Download/Upload) numa grade de 4
+  colunas no meio, 2 barras de carga (CPU/Memória, gradiente invertido — ver
+  `STANDARDS.md`) embaixo. Ganhou `h=6` de grid (bem mais espaço que o `h=2`
+  fragmentado da v3) — o card fica com respiro, nível parecido com os cards de
+  inversor do Fronius.
+- **Tabela de câmeras**: trocado o fundo de linha tintado (baixa opacidade,
+  contraste fraco) por **badge sólido** colorido à direita de cada linha
+  (verde/vermelho/cinza, texto escuro em caixa alta) — nome da câmera em texto
+  claro de alto contraste à esquerda. Zebra sutil entre linhas pra separar
+  visualmente. Ver padrão novo em `STANDARDS.md` ("Listas de status").
+- **Gráfico de quedas**: trocado de "1 trilha horizontal por câmera" (parecia
+  gráfico de barras, segundo o usuário) para **1 linha de série temporal só**,
+  em degraus (step), mostrando **quantas câmeras flagradas estavam offline a
+  cada instante** — mesmo componente de sparkline-com-hover do Fronius
+  (tooltip mostra horário + contagem + até 3 nomes de câmeras afetadas). Ver
+  padrão reescrito em `STANDARDS.md` ("Dado categórico em formato longo").
+
+**Bug pego durante o teste** (não existia antes porque a v3 nunca tinha sido
+testada com esse volume de dado neste componente novo): a câmera `Canal32` do
+NVR 05 tem nome mas nenhum status registrado nas últimas 3h (join que não
+casou), então sua única linha na query vem com `TimestampStatus = NULL`. Um
+`t` nulo quebra a ordenação cronológica (`null` vira `0` numa subtração JS) e
+jogava o cálculo do eixo de tempo pros anos 1970, gerando **~10.400 marcações
+idênticas**. Corrigido filtrando `t == null || isNaN(t)` antes de processar, e
+foi adicionada uma trava de segurança no `hg_niceTicks` (máximo de 50
+marcações, nunca mais um loop desse tamanho) — ver `STANDARDS.md`.
+
+**Validação antes de publicar**: reexecutei os 5 tipos de painel via
+`POST /api/ds/query` (card unificado com as 6 queries mistas juntas; tabela;
+gráfico de quedas pros 3 cenários reais — NVR01 com 2 câmeras, NVR02 com 1,
+NVR05 com 18) e testei o `onRender` com `mock_panel.js`/scripts de detalhe
+ad-hoc. Confirmei o bug do `Canal32` isolando a query bruta antes de corrigir,
+e confirmei a correção reexecutando o mesmo teste depois.
+
+**Layout final (grid 24×29)**:
+
+| Seção | y | h |
+|---|---|---|
+| Cabeçalho global (full-width) | 0 | 2 |
+| Card unificado por NVR | 2 | 6 |
+| Tabela de câmeras | 8 | 15 |
+| Gráfico de quedas (série temporal agregada, 3h) | 23 | 6 |
+
+Colunas por NVR: NVR01-04 w=5 (x=0,5,10,15), NVR05 w=4 (x=20) — total 24.
+
+Publicado como `version: 4` (16 painéis).
+
 **Pendências / a confirmar com o usuário após ver na TV real**:
-- Tudo que já estava pendente na v2 (altura da timeline pra NVR03/04/05, teto
-  de grid) continua valendo.
-- Legibilidade real da tabela de câmeras (32 linhas em ~17 linhas de grade,
-  fonte pequena por necessidade) e da timeline (linhas ainda mais finas que a
-  versão nativa, já que agora cabe rótulo + trilha customizados na mesma
-  altura) — primeira vez que esse layout específico é visto numa tela real.
+- Nível de acabamento do card unificado e legibilidade geral — primeira vez
+  que esse layout é visto numa tela real.
+- Legibilidade da tabela de câmeras com os novos badges (32 linhas em 15
+  linhas de grade, um pouco mais apertado que a v3 pra abrir espaço pro card
+  unificado).
+- Confirmar que o teto 24×29 realmente se aplica a esta TV (pendência antiga,
+  ainda não confirmada explicitamente pelo usuário).
