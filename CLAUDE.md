@@ -23,7 +23,7 @@ visualização e para o usuário conferir o resultado na TV.
 | Dashboard | Documento | Abordagem |
 |---|---|---|
 | Painéis Solares - Fronius | [`dashboards/paineis-solares-fronius.md`](dashboards/paineis-solares-fronius.md) | Plugin HTML Graphics (painéis 100% customizados em HTML/CSS/JS) |
-| Monitoramento de Câmeras | [`dashboards/monitoramento-de-cameras.md`](dashboards/monitoramento-de-cameras.md) | Painéis nativos do Grafana (`stat`, `bargauge`, `table`, `state-timeline`) |
+| Monitoramento de Câmeras | [`dashboards/monitoramento-de-cameras.md`](dashboards/monitoramento-de-cameras.md) | Plugin HTML Graphics (painéis 100% customizados em HTML/CSS/JS) |
 
 Cada um tem seu script gerador em `scripts/<nome-do-dashboard>/generate_dashboard.js`
 e um backup/snapshot do JSON publicado na mesma pasta.
@@ -46,12 +46,13 @@ e um backup/snapshot do JSON publicado na mesma pasta.
 
 ## Pedido para criar um dashboard novo
 
-Siga a seção "Workflow geral de alteração de dashboard" em `STANDARDS.md`
-(inclui o passo específico pra dashboard novo: criar pasta em `scripts/<nome>/`,
-decidir HTML Graphics vs. painéis nativos — critério na mesma seção — e criar
-`dashboards/<nome>.md` do zero seguindo a estrutura dos exemplos existentes).
-**Sempre feche a tarefa adicionando uma linha na tabela acima e na de
-`README.md`.**
+**HTML Graphics é obrigatório em todo dashboard novo, sem exceção** — não é
+uma decisão a se fazer por painel, é regra fixa do projeto. Siga a seção
+"Workflow geral" em `STANDARDS.md` (tem o passo a passo completo de "criar um
+dashboard novo do zero": pasta em `scripts/<nome>/`, confirmar o plugin
+habilitado, confirmar o teto de grid da TV, e criar `dashboards/<nome>.md` do
+zero seguindo a estrutura dos exemplos existentes). **Sempre feche a tarefa
+adicionando uma linha na tabela acima e na de `README.md`.**
 
 ## Regra obrigatória de atualização da documentação
 

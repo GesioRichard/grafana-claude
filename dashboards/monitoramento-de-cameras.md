@@ -4,7 +4,14 @@
 - **URL**: `http://192.168.0.104:3000/d/ag4ox6tas8uf4b/monitoramento-de-cameras-copy`
 - **Pasta**: folderId 37 / folderUid `beo1jpm2pybk0f`
 - **Script gerador**: `scripts/monitoramento-de-cameras/generate_dashboard.js`
+- **Templates de query SQL**: `scripts/monitoramento-de-cameras/query_templates.json`
+  (extraídos uma vez do dashboard ao vivo, parametrizados por `ht.name` no
+  gerador — nunca retranscritos à mão, pra não arriscar erro de digitação num
+  SQL com CTE/regex)
 - **Backup bruto antes da v2**: `scripts/monitoramento-de-cameras/backup_v1.json`
+- **Harness de teste**: `scripts/monitoramento-de-cameras/mock_panel.js` — mock
+  genérico, recebe payload + marcador de HTML + resultado de `/api/ds/query` +
+  lista de refIds (ver padrão de teste no `STANDARDS.md`)
 
 ## O que este dashboard mostra
 
@@ -15,23 +22,24 @@
    (tráfego de rede do NVR).
 3. CPU e Memória do NVR.
 4. Tabela com todas as câmeras daquele NVR e o status atual (Online/Offline/Empty).
-5. **(novo na v2)** Gráfico State Timeline com as câmeras que caíram em algum
-   momento das últimas 3h (ver seção da query abaixo).
+5. Gráfico com as câmeras que caíram em algum momento das últimas 3h (ver seção
+   da query abaixo) — um "state timeline" customizado desde a v3.
 
 ## Datasources
 
 - **Zabbix** (`alexanderzobnin-zabbix-datasource`, uid `fdfjaoiye7im8a`): métricas
   "ao vivo" dos hosts NVR (CPU Usage, Memory Utilization, Interface eth0: Bits
-  received/sent). Usado nos cards de topo e no bar gauge de CPU/Memória.
+  received/sent). Usado nos cards de topo e nas barras de CPU/Memória.
 - **MySQL** (`mysql`, uid `de834v5wv8flsd`): consultas diretas nas tabelas internas
   do Zabbix (`hosts`, `items`, `history_str`) pra extrair nome/status de cada
   câmera a partir das chaves de item `remoteCam[name...]` / `remoteCam[status...]`.
   Usado nos cards ONLINE/OFFLINE, na tabela de câmeras e no gráfico de quedas.
 
-⚠️ **Este dashboard não usa o plugin HTML Graphics** (`gapit-htmlgraphics-panel`) —
-é inteiramente montado com painéis nativos do Grafana (`stat`, `bargauge`, `table`,
-`state-timeline`). Os gotchas de `refId`/HTML Graphics do `STANDARDS.md` **não se
-aplicam** aqui.
+⚠️ **Desde a v3, este dashboard usa o plugin HTML Graphics**
+(`gapit-htmlgraphics-panel`) em 100% dos painéis — é obrigatório em todo
+dashboard novo (ver `STANDARDS.md`). Os gotchas de `refId` e o padrão de teste
+via `new Function(...)` do `STANDARDS.md` **se aplicam normalmente** aqui. A v1
+e a v2 (native, descontinuada) ficam só como histórico abaixo.
 
 ## Teto de grid desta TV
 
@@ -167,3 +175,59 @@ consigo validar sem acesso a navegador — continua em aberto):
   renderizando cada câmera como uma linha separada e legível no State Timeline
   (a configuração está correta no JSON, mas o resultado visual/legibilidade só o
   usuário consegue confirmar).
+
+### v3 — 2026-11-18
+
+**Por quê**: o usuário corrigiu um mal-entendido — **HTML Graphics é obrigatório
+em todo dashboard novo**, sem exceção; não é uma escolha por painel/por
+dashboard. A v2 (painéis nativos) foi feita por engano. Pedido: refazer a
+identidade visual inteira do dashboard usando HTML Graphics, aplicando a mesma
+paleta/componentes já estabelecidos no dashboard Fronius.
+
+**O que mudou**: todos os 30 painéis foram reconstruídos como
+`gapit-htmlgraphics-panel`. **Nenhuma query SQL/Zabbix mudou** — extraídas uma
+vez do dashboard ao vivo (`query_templates.json`) e reaproveitadas tal qual; só
+a renderização mudou. Layout (posições/alturas) idêntico ao da v2 — a
+reclamação era sobre a tecnologia de renderização, não sobre a organização do
+espaço.
+
+- **Cabeçalho NVR**: painel estático (sem query), título grande centralizado,
+  fundo em gradiente navy igual aos cards do Fronius.
+- **Online/Offline**: 2 células lado a lado com fundo verde/vermelho escuro
+  (gradiente, não cor chapada) e número em destaque — mesma query MySQL de
+  antes (2 targets).
+- **Download/Upload**: 2 células num card navy padrão, valores formatados com
+  a mesma função de escala automática do Fronius (`hg_fmtScaled`), adaptada pra
+  bits/s (`hg_fmtBits`: b/s → Kb/s → Mb/s → Gb/s).
+- **CPU/Memória**: a barra de carga em gradiente contínuo do Fronius (SVG+CSS,
+  não mais o `bargauge` nativo), **mas com o gradiente invertido**
+  (verde→amarelo→vermelho da esquerda pra direita, não vermelho→verde) — pra
+  CPU/Memória, valor **alto é ruim**, o oposto da semântica original da barra
+  (criada pra "quanto mais gerado, melhor"). Ver nota nova em `STANDARDS.md`.
+- **Tabela de câmeras**: lista HTML customizada (não mais `table` nativa) —
+  cada câmera uma linha com fundo colorido (verde/vermelho/cinza) por status,
+  construída com `flex:1` por linha pra se adaptar a qualquer contagem de
+  câmeras sem precisar calcular altura manualmente.
+- **Gráfico de quedas**: state-timeline **100% customizado em HTML/SVG** (ver
+  `STANDARDS.md`, "Dado categórico em formato longo") — substituiu o painel
+  nativo `state-timeline` + transformação `partitionByValues`. Mesmo algoritmo
+  de "nice ticks" do Fronius pro eixo de tempo. Cada segmento tem `title`
+  (tooltip nativo do navegador) com câmera + status + horário.
+
+**Validação antes de publicar** (ver `STANDARDS.md`, padrão de teste): rodei a
+query real de cada um dos 5 tipos de painel via `POST /api/ds/query` e testei
+o `onRender` gerado contra os dados reais com `mock_panel.js`, incluindo os
+dois extremos da timeline de quedas — NVR02 (1 câmera, com um blip claro de
+queda-e-volta no meio da janela, exatamente o padrão que o usuário quer
+investigar) e NVR05 (18 câmeras, o caso mais pesado) — sem exceções em nenhum
+dos dois.
+
+Publicado como `version: 3` (30 painéis, mesmo `gridPos` da v2).
+
+**Pendências / a confirmar com o usuário após ver na TV real**:
+- Tudo que já estava pendente na v2 (altura da timeline pra NVR03/04/05, teto
+  de grid) continua valendo.
+- Legibilidade real da tabela de câmeras (32 linhas em ~17 linhas de grade,
+  fonte pequena por necessidade) e da timeline (linhas ainda mais finas que a
+  versão nativa, já que agora cabe rótulo + trilha customizados na mesma
+  altura) — primeira vez que esse layout específico é visto numa tela real.

@@ -62,44 +62,40 @@ dashboard diga o contrário.
 
 ### Criar um dashboard novo do zero
 
+> ⚠️ **HTML Graphics é obrigatório em todo dashboard novo, sem exceção.** Não é
+> uma decisão a se fazer por painel — é regra fixa do projeto, definida pelo
+> usuário. Todo painel de um dashboard novo (cards, tabelas, gráficos de série
+> temporal, timelines, o que for) é construído como `gapit-htmlgraphics-panel`,
+> aplicando a paleta/tipografia/padrões da seção "Identidade visual" abaixo —
+> nunca `stat`/`bargauge`/`table`/`state-timeline` nativos num dashboard novo.
+> (O dashboard de Monitoramento de Câmeras foi feito com painéis nativos numa
+> sessão anterior, por um mal-entendido — está sendo refeito em HTML Graphics;
+> não o use como modelo de "quando usar nativo", só como referência das queries
+> SQL/Zabbix que ele já tinha mapeado.)
+
 1. Pedir ao usuário a URL/UID do dashboard-base já existente no Grafana (via de
    regra já existe algo "cru" feito pela equipe que o usuário quer reorganizar/
    redesenhar) e a pasta/folder de destino.
 2. `GET /api/dashboards/uid/<uid>` — mesmo primeiro passo de "alterar um
-   existente" acima; isso vira o backup/snapshot inicial.
-3. Decidir **HTML Graphics vs. painéis nativos** (ver critério abaixo) antes de
-   escrever qualquer código.
-4. Se for usar HTML Graphics: confirmar que o plugin está instalado e habilitado
+   existente" acima; isso vira o backup/snapshot inicial. Isso também serve pra
+   extrair as queries (Zabbix e/ou SQL) que já existem e que os painéis novos em
+   HTML Graphics vão reaproveitar — só muda a renderização, não o dado.
+3. Confirmar que o plugin HTML Graphics está instalado e habilitado
    (`GET /api/plugins/gapit-htmlgraphics-panel/settings` → `"enabled":true`) antes
    de desenhar qualquer painel — ver passos de instalação na seção do plugin.
-5. Confirmar com o usuário o **teto de grid** (linhas×colunas) da TV onde vai ser
+4. Confirmar com o usuário o **teto de grid** (linhas×colunas) da TV onde vai ser
    exibido — não assumir 24×29 sem confirmar, a menos que seja a mesma classe de
    tela já documentada em outro dashboard.
-6. Criar `scripts/<nome-dashboard>/` e o `generate_dashboard.js`, usando um dos
-   dois dashboards existentes como modelo de estrutura (Fronius pra HTML
-   Graphics, Câmeras pra nativo) e reaproveitando os padrões visuais/técnicos do
-   restante deste arquivo.
-7. Seguir os passos 3-7 de "Alterar um dashboard existente" acima (validar,
+5. Criar `scripts/<nome-dashboard>/` e o `generate_dashboard.js`, usando o
+   dashboard Fronius como modelo de estrutura e reaproveitando os componentes
+   visuais já prontos (header, card com barra de carga em gradiente, sparkline
+   com hover, etc. — ver "Identidade visual" abaixo) em vez de reinventar do
+   zero a cada dashboard novo.
+6. Seguir os passos 3-7 de "Alterar um dashboard existente" acima (validar,
    publicar, pedir confirmação visual, documentar, commitar).
-8. Criar `dashboards/<nome-dashboard>.md` do zero (estrutura dos exemplos
+7. Criar `dashboards/<nome-dashboard>.md` do zero (estrutura dos exemplos
    existentes como modelo) e adicionar uma linha nas tabelas de dashboards em
    `CLAUDE.md` e `README.md`.
-
-### HTML Graphics vs. painéis nativos: como decidir
-
-- **Painéis nativos** (`stat`, `bargauge`, `table`, `state-timeline`,
-  `timeseries`, etc.) sempre que o resultado desejado já é parecido com algum
-  tipo de painel nativo — mais simples de manter, sem depender de plugin extra,
-  e o Grafana já resolve legibilidade/tema/transformações de dado (ex.:
-  "Partition by values") sem precisar de JS. Usado no dashboard de Câmeras.
-- **HTML Graphics** quando o design pedido foge do que um painel nativo consegue
-  fazer sozinho — layout composto (ex.: um card com título + várias métricas +
-  barra de carga + sparkline, tudo num painel só), tipografia/paleta muito
-  específica, interações customizadas (hover/tooltip próprio), ou fundo de
-  página animado. Usado no dashboard Fronius.
-- Nada impede misturar os dois **no mesmo dashboard** (um cabeçalho HTML
-  Graphics ao lado de tabelas nativas, por exemplo) — a escolha é por painel,
-  não por dashboard inteiro.
 
 ## Instância Grafana
 
@@ -240,6 +236,13 @@ precisar saber qual é a real.
   dashboard Fronius). Por cima do gradiente, uma máscara escura
   (`div.mask{position:absolute;right:0;...}`) encolhe da direita pra esquerda
   conforme o valor sobe (`mask.style.width = (100 - pct) + '%'`).
+  - **Direção do gradiente depende da semântica da métrica**: vermelho→verde
+    (esquerda pra direita) quando **valor alto é bom** (ex.: potência gerada,
+    energia do dia). Para métricas onde **valor alto é ruim** (ex.: CPU,
+    Memória, latência, taxa de erro), **inverter**:
+    `linear-gradient(90deg,#34d399 0%,#fbbf24 50%,#f87171 100%)` (verde→vermelho)
+    — senão a barra passa a mensagem errada de "quanto mais, melhor" pra uma
+    métrica onde é o oposto. Usado em CPU/Memória no dashboard de Câmeras (v3).
 - **Cabeçalho padrão**: logo (quadrado arredondado com gradiente azul + ícone
   branco) + nome do app + divisor fino + bloco de título (linha 1 maior/branca,
   linha 2 menor/azulada) à esquerda; à direita, itens separados por divisores finos
@@ -391,50 +394,60 @@ altura de caractere-alvo → fontes de valor principal entre 29-50px dependendo 
 espaço disponível em cada painel (ver changelog em
 `dashboards/paineis-solares-fronius.md` para o valor final de cada elemento).
 
-## Dashboards sem o plugin HTML Graphics (painéis nativos do Grafana)
+## Histórico: painéis nativos no dashboard de Câmeras (v1-v2, descontinuado)
 
-Nem todo dashboard desta pasta precisa do plugin HTML Graphics — o dashboard de
-Monitoramento de Câmeras, por exemplo, é montado inteiramente com painéis nativos
-(`stat`, `bargauge`, `table`, `state-timeline`), sem nenhum painel
-`gapit-htmlgraphics-panel`. Os gotchas de `refId` e o padrão de teste via
-`new Function(...)` descritos na seção do plugin acima **só se aplicam** a
-dashboards que de fato usam HTML Graphics — confirme qual é o caso antes de
-aplicar essas regras. Para dashboards 100% nativos, os riscos de dado errado
-costumam estar na própria `rawSql`/filtro do painel (ex.: host/item filtrado
-errado numa query duplicada — ver changelog v1→v2 em
-`dashboards/monitoramento-de-cameras.md`, onde um painel duplicado ficou
-apontando pro host errado), não em JS de painel.
+> ⚠️ **Não repita isto em nenhum dashboard novo.** Por um mal-entendido, a v2 do
+> dashboard de Monitoramento de Câmeras foi feita 100% com painéis nativos do
+> Grafana (`stat`, `bargauge`, `table`, `state-timeline`). O usuário corrigiu:
+> **HTML Graphics é obrigatório em todo dashboard novo** (ver "Criar um dashboard
+> novo do zero" no topo deste arquivo). O dashboard de Câmeras **já foi
+> reconstruído em HTML Graphics na v3** — ver `dashboards/monitoramento-de-cameras.md`
+> para a versão atual. Esta seção fica só como registro histórico de por que a
+> v1→v2 foi feita daquele jeito e o que se aprendeu, caso ajude a entender
+> decisões antigas ou dado herdado (queries SQL/Zabbix continuam as mesmas,
+> só a renderização muda).
 
-### Bar Gauge em gradiente como alternativa leve à barra de carga customizada
+Os gotchas de `refId` e o padrão de teste via `new Function(...)` descritos na
+seção do plugin acima **só se aplicam** a painéis que de fato usam HTML
+Graphics. Para os painéis nativos que ainda possam existir em dashboards
+antigos, os riscos de dado errado costumam estar na própria `rawSql`/filtro do
+painel (ex.: host/item filtrado errado numa query duplicada — foi o caso do
+bug do NVR 05 na v1 do dashboard de Câmeras, copy/paste ao duplicar painéis),
+não em JS de painel.
 
-A barra de carga vermelho→amarelo→verde descrita na seção de paleta acima foi
-desenhada à mão (SVG + máscara) porque o painel HTML Graphics não tem um widget
-de barra nativo. Em um dashboard que **não** usa HTML Graphics, o painel nativo
-`bargauge` do Grafana (`options.displayMode: "gradient"`,
-`options.orientation: "horizontal"`, com `thresholds` verde/amarelo(80)/vermelho(90))
-já produz uma barra em gradiente contínuo equivalente, ocupando bem menos altura
-de grid que o `gauge` radial — usado para trocar os gauges de CPU/Memória por
-NVR no dashboard de Câmeras (v2). Prefira essa opção nativa a reimplementar a
-barra customizada quando o dashboard já não depender de HTML Graphics.
+### Bar Gauge em gradiente nativo (abordagem descontinuada)
 
-### Transformação "Partition by values": série categórica (long format) → painel por categoria
+A barra de carga vermelho→amarelo→verde descrita na seção de paleta acima é
+desenhada à mão (SVG + máscara) porque é assim que fica consistente com o resto
+da identidade visual em HTML Graphics. A v2 do dashboard de Câmeras usou o
+painel nativo `bargauge` (`displayMode: "gradient"`) como atalho pra CPU/Memória
+— **não fazer isso em dashboards novos**; o componente de barra em HTML/CSS
+(ver "Identidade visual") é obrigatório, mesmo custando um pouco mais de código
+por painel.
+
+### Dado categórico em formato "longo" (abordagem nativa descontinuada + equivalente em HTML Graphics)
 
 Quando uma query SQL retorna dado em formato "longo" — uma linha por
-`(tempo, categoria, valor)`, ex.: `(TimestampStatus, Câmera, Status)` — painéis
-como `state-timeline` ou `timeseries` esperam formato "largo" (uma série por
-categoria). Em vez de reescrever a query SQL pra fazer `PIVOT`, aplique a
-transformação nativa do Grafana **"Partition by values"** no painel:
+`(tempo, categoria, valor)`, ex.: `(TimestampStatus, Câmera, Status)` — a v2
+(nativa, descontinuada) do dashboard de Câmeras usava a transformação do
+Grafana **"Partition by values"** (`transformations: [{id:'partitionByValues',
+options:{fields:['Câmera'], keepFields:false, naming:{asLabels:false}}}]`) pra
+separar em uma série por câmera antes de passar pro `state-timeline`.
 
-```jsonc
-transformations: [{
-  id: 'partitionByValues',
-  options: { fields: ['Câmera'], keepFields: false, naming: { asLabels: false } },
-}]
+Em HTML Graphics não existe pipeline de transformação — o agrupamento é feito à
+mão no `onRender`, iterando os 3 campos da query (tempo, categoria, status) e
+acumulando num objeto `{ [categoria]: [{t, v}, ...] }`:
+
+```js
+var byCategory = {};
+for (var i = 0; i < catVals.length; i++) {
+  var cat = catVals[i];
+  if (!byCategory[cat]) byCategory[cat] = [];
+  byCategory[cat].push({ t: tVals[i], v: statusVals[i] });
+}
 ```
 
-`naming.asLabels: false` é o que faz cada série resultante herdar o próprio
-valor da categoria (o nome da câmera) como nome de campo — necessário pro
-`state-timeline` rotular cada linha/faixa corretamente. Usado nos 5 painéis
-novos de "câmeras que caíram" do dashboard de Câmeras (v2) a partir da query de
-`menor_status_periodo` (ver `dashboards/monitoramento-de-cameras.md`).
+Cada chave de `byCategory` vira uma linha/faixa do timeline customizado (ver
+componente "state-timeline em HTML Graphics" em
+`dashboards/monitoramento-de-cameras.md`).
 
