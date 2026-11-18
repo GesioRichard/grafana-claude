@@ -17,9 +17,15 @@ dashboard diga o contrário.
 > ⚠️ **Limite de grade é intocável.** Cada dashboard tem um teto fixo de linhas×colunas
 > definido pelo tamanho físico da tela onde ele é exibido (sem rolagem). Para o
 > dashboard Fronius esse teto é **24 colunas × 29 linhas** — ver
-> `dashboards/paineis-solares-fronius.md`. **Qualquer pedido de painel novo, gráfico
-> adicional ou redistribuição de layout precisa primeiro verificar esse teto e
-> encaixar a mudança dentro dele** (reduzindo a altura de outras seções se
+> `dashboards/paineis-solares-fronius.md`. O dashboard de Monitoramento de Câmeras
+> usa o **mesmo teto 24×29** (confirmado batendo com a área visível sem scroll que
+> já estava em produção antes de qualquer alteração — ver
+> `dashboards/monitoramento-de-cameras.md`), o que sugere que **24×29 é o teto
+> padrão desta TV/classe de tela ("TV ATALAIA")**, não algo exclusivo do Fronius —
+> mas confirme com o usuário se um dashboard novo for exibido em tela física
+> diferente antes de assumir o mesmo valor. **Qualquer pedido de painel novo,
+> gráfico adicional ou redistribuição de layout precisa primeiro verificar esse
+> teto e encaixar a mudança dentro dele** (reduzindo a altura de outras seções se
 > necessário), nunca excedendo o total. Antes de publicar, o script gerador deve
 > imprimir a soma final de `gridPos` e conferir contra o teto documentado daquele
 > dashboard (ver `console.log` de bounding box em `generate_dashboard.js`).
@@ -313,6 +319,53 @@ Exemplo real (dashboard Fronius): TV 65" 4K, 16:9, vista a ~3,25m → ~2,2 a 3,3
 altura de caractere-alvo → fontes de valor principal entre 29-50px dependendo do
 espaço disponível em cada painel (ver changelog em
 `dashboards/paineis-solares-fronius.md` para o valor final de cada elemento).
+
+## Dashboards sem o plugin HTML Graphics (painéis nativos do Grafana)
+
+Nem todo dashboard desta pasta precisa do plugin HTML Graphics — o dashboard de
+Monitoramento de Câmeras, por exemplo, é montado inteiramente com painéis nativos
+(`stat`, `bargauge`, `table`, `state-timeline`), sem nenhum painel
+`gapit-htmlgraphics-panel`. Os gotchas de `refId` e o padrão de teste via
+`new Function(...)` descritos na seção do plugin acima **só se aplicam** a
+dashboards que de fato usam HTML Graphics — confirme qual é o caso antes de
+aplicar essas regras. Para dashboards 100% nativos, os riscos de dado errado
+costumam estar na própria `rawSql`/filtro do painel (ex.: host/item filtrado
+errado numa query duplicada — ver changelog v1→v2 em
+`dashboards/monitoramento-de-cameras.md`, onde um painel duplicado ficou
+apontando pro host errado), não em JS de painel.
+
+### Bar Gauge em gradiente como alternativa leve à barra de carga customizada
+
+A barra de carga vermelho→amarelo→verde descrita na seção de paleta acima foi
+desenhada à mão (SVG + máscara) porque o painel HTML Graphics não tem um widget
+de barra nativo. Em um dashboard que **não** usa HTML Graphics, o painel nativo
+`bargauge` do Grafana (`options.displayMode: "gradient"`,
+`options.orientation: "horizontal"`, com `thresholds` verde/amarelo(80)/vermelho(90))
+já produz uma barra em gradiente contínuo equivalente, ocupando bem menos altura
+de grid que o `gauge` radial — usado para trocar os gauges de CPU/Memória por
+NVR no dashboard de Câmeras (v2). Prefira essa opção nativa a reimplementar a
+barra customizada quando o dashboard já não depender de HTML Graphics.
+
+### Transformação "Partition by values": série categórica (long format) → painel por categoria
+
+Quando uma query SQL retorna dado em formato "longo" — uma linha por
+`(tempo, categoria, valor)`, ex.: `(TimestampStatus, Câmera, Status)` — painéis
+como `state-timeline` ou `timeseries` esperam formato "largo" (uma série por
+categoria). Em vez de reescrever a query SQL pra fazer `PIVOT`, aplique a
+transformação nativa do Grafana **"Partition by values"** no painel:
+
+```jsonc
+transformations: [{
+  id: 'partitionByValues',
+  options: { fields: ['Câmera'], keepFields: false, naming: { asLabels: false } },
+}]
+```
+
+`naming.asLabels: false` é o que faz cada série resultante herdar o próprio
+valor da categoria (o nome da câmera) como nome de campo — necessário pro
+`state-timeline` rotular cada linha/faixa corretamente. Usado nos 5 painéis
+novos de "câmeras que caíram" do dashboard de Câmeras (v2) a partir da query de
+`menor_status_periodo` (ver `dashboards/monitoramento-de-cameras.md`).
 
 ## Workflow geral de alteração de dashboard
 
