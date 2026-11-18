@@ -42,8 +42,8 @@ const NVRS = [
 
 const Y_HEADER = 0, H_HEADER = 2;
 const Y_NVRCARD = Y_HEADER + H_HEADER, H_NVRCARD = 6;
-const Y_TABLE = Y_NVRCARD + H_NVRCARD, H_TABLE = 15;
-const Y_CHART = Y_TABLE + H_TABLE, H_CHART = 6;
+const Y_TABLE = Y_NVRCARD + H_NVRCARD, H_TABLE = 17;
+const Y_CHART = Y_TABLE + H_TABLE, H_CHART = 4;
 const TOTAL_H = H_HEADER + H_NVRCARD + H_TABLE + H_CHART;
 
 function sqlFor(templateKey, nvr) {
@@ -271,37 +271,46 @@ function nvrCardComponent(nvr) {
 .nvr-head{display:flex;align-items:center;gap:10px;flex:none;}
 .nvr-dot{width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;flex:none;animation:pulse 1.8s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
-.nvr-title{font-size:22px;font-weight:800;letter-spacing:.6px;color:#fff;}
-.nvr-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:none;}
-.nvr-stat{padding:0 6px;border-left:1px solid rgba(96,165,250,0.15);display:flex;flex-direction:column;gap:2px;min-width:0;}
-.nvr-stat:first-child{border-left:none;padding-left:0;}
-.nvr-lbl{font-size:10px;font-weight:800;letter-spacing:.4px;color:#89a0c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.nvr-val{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.nvr-val.online{color:#34d399;}
-.nvr-val.offline{color:#f87171;}
-.nvr-val.down{color:#60a5fa;}
-.nvr-val.up{color:#fbbf24;}
-.nvr-bars{display:flex;gap:14px;flex:1;align-items:center;}
-.nvr-barcell{flex:1;display:flex;flex-direction:column;gap:5px;}
+.nvr-title{font-size:22px;font-weight:800;letter-spacing:.6px;color:#fff;white-space:nowrap;}
+.nvr-oo{display:flex;align-items:baseline;gap:10px;margin-left:auto;flex:none;}
+.nvr-oo-item{display:flex;align-items:baseline;gap:4px;white-space:nowrap;}
+.nvr-oo-val{font-size:19px;font-weight:800;}
+.nvr-oo-lbl{font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#89a0c4;}
+.nvr-oo-item.online .nvr-oo-val{color:#34d399;}
+.nvr-oo-item.offline .nvr-oo-val{color:#f87171;}
+.nvr-oo-sep{color:rgba(96,165,250,0.3);font-size:16px;}
+.nvr-bars{display:flex;gap:16px;flex:1;align-items:center;}
+.nvr-barcell{flex:1;display:flex;flex-direction:column;gap:6px;}
 .nvr-bar-row{display:flex;justify-content:space-between;align-items:baseline;}
-.nvr-bar-lbl{font-size:11px;font-weight:800;color:#89a0c4;letter-spacing:.4px;}
-.nvr-bar-pct{font-size:15px;font-weight:800;color:#bcd4ff;}
-.track{position:relative;height:11px;border-radius:6px;overflow:hidden;
+.nvr-bar-lbl{font-size:12.5px;font-weight:800;color:#89a0c4;letter-spacing:.4px;}
+.nvr-bar-pct{font-size:17px;font-weight:800;color:#bcd4ff;}
+.track{position:relative;height:13px;border-radius:7px;overflow:hidden;
   background:linear-gradient(90deg,#34d399 0%,#fbbf24 50%,#f87171 100%);}
 .track .mask{position:absolute;top:0;right:0;bottom:0;background:rgba(5,10,20,0.85);transition:width .4s ease;}
+.nvr-net{display:flex;gap:16px;flex:none;}
+.nvr-netcell{flex:1;display:flex;flex-direction:column;gap:3px;}
+.nvr-net-lbl{font-size:11.5px;font-weight:800;letter-spacing:.4px;color:#89a0c4;}
+.nvr-net-val{font-size:22px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nvr-net-val.down{color:#60a5fa;}
+.nvr-net-val.up{color:#fbbf24;}
 `;
   const html = `
 <div class="nvr">
-  <div class="nvr-head"><span class="nvr-dot"></span><span class="nvr-title">${nvr.host}</span></div>
-  <div class="nvr-stats">
-    <div class="nvr-stat"><div class="nvr-lbl">ONLINE</div><div class="nvr-val online" id="v-online">--</div></div>
-    <div class="nvr-stat"><div class="nvr-lbl">OFFLINE</div><div class="nvr-val offline" id="v-offline">--</div></div>
-    <div class="nvr-stat"><div class="nvr-lbl">DOWNLOAD</div><div class="nvr-val down" id="v-down">--</div></div>
-    <div class="nvr-stat"><div class="nvr-lbl">UPLOAD</div><div class="nvr-val up" id="v-up">--</div></div>
+  <div class="nvr-head">
+    <span class="nvr-dot"></span><span class="nvr-title">${nvr.host}</span>
+    <div class="nvr-oo">
+      <span class="nvr-oo-item online"><span class="nvr-oo-val" id="v-online">--</span><span class="nvr-oo-lbl">ONLINE</span></span>
+      <span class="nvr-oo-sep">/</span>
+      <span class="nvr-oo-item offline"><span class="nvr-oo-val" id="v-offline">--</span><span class="nvr-oo-lbl">OFFLINE</span></span>
+    </div>
   </div>
   <div class="nvr-bars">
     <div class="nvr-barcell"><div class="nvr-bar-row"><span class="nvr-bar-lbl">CPU</span><span class="nvr-bar-pct" id="v-cpu">--%</span></div><div class="track" id="track-cpu"></div></div>
     <div class="nvr-barcell"><div class="nvr-bar-row"><span class="nvr-bar-lbl">MEM</span><span class="nvr-bar-pct" id="v-mem">--%</span></div><div class="track" id="track-mem"></div></div>
+  </div>
+  <div class="nvr-net">
+    <div class="nvr-netcell"><div class="nvr-net-lbl">DOWNLOAD</div><div class="nvr-net-val down" id="v-down">--</div></div>
+    <div class="nvr-netcell"><div class="nvr-net-lbl">UPLOAD</div><div class="nvr-net-val up" id="v-up">--</div></div>
   </div>
 </div>`;
   const onRender = HELPERS + `
@@ -338,15 +347,15 @@ function cameraTableComponent() {
   font-family:'Segoe UI',Roboto,Arial,sans-serif;
   background:linear-gradient(160deg,#0b1830 0%,#0a1428 55%,#081022 100%);
   border:1px solid rgba(96,165,250,0.18);border-radius:10px;padding:6px 8px;}
-.cam-row{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:0;
+.cam-row{flex:1;display:flex;align-items:center;gap:9px;min-height:0;
   border-bottom:1px solid rgba(96,165,250,0.08);}
 .cam-row:last-child{border-bottom:none;}
 .cam-row:nth-child(even){background:rgba(255,255,255,0.02);}
-.cam-name{font-size:12px;font-weight:700;color:#e8f1ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:4px;}
-.cam-badge{font-size:9.5px;font-weight:800;letter-spacing:.4px;flex:none;padding:2px 8px;border-radius:999px;color:#061018;}
-.cam-badge.online{background:#34d399;}
-.cam-badge.offline{background:#f87171;}
-.cam-badge.empty{background:#8595ab;}
+.cam-dot{width:9px;height:9px;border-radius:50%;flex:none;}
+.cam-dot.online{background:#34d399;box-shadow:0 0 6px rgba(52,211,153,.7);}
+.cam-dot.offline{background:#f87171;box-shadow:0 0 6px rgba(248,113,113,.7);}
+.cam-dot.empty{background:#6b7a90;}
+.cam-name{font-size:14.5px;font-weight:700;color:#e8f1ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 `;
   const html = `<div class="camtable" id="camtable"></div>`;
   const onRender = HELPERS + `
@@ -361,13 +370,13 @@ try {
       var name = names[i];
       if (name == null) continue;
       var st = statuses[i];
-      var cls = 'empty', label = 'EMPTY';
-      if (st === 'Connected') { cls = 'online'; label = 'ONLINE'; }
-      else if (st === 'Unconnect') { cls = 'offline'; label = 'OFFLINE'; }
+      var cls = 'empty';
+      if (st === 'Connected') { cls = 'online'; }
+      else if (st === 'Unconnect') { cls = 'offline'; }
       var row = document.createElement('div'); row.className = 'cam-row';
+      var dotEl = document.createElement('span'); dotEl.className = 'cam-dot ' + cls;
       var nameEl = document.createElement('span'); nameEl.className = 'cam-name'; nameEl.textContent = name;
-      var badgeEl = document.createElement('span'); badgeEl.className = 'cam-badge ' + cls; badgeEl.textContent = label;
-      row.appendChild(nameEl); row.appendChild(badgeEl);
+      row.appendChild(dotEl); row.appendChild(nameEl);
       wrap.appendChild(row);
     }
   }
@@ -388,7 +397,8 @@ function dropsChartComponent() {
   background:linear-gradient(160deg,#0b1830 0%,#0a1428 55%,#081022 100%);
   border:1px solid rgba(96,165,250,0.18);border-radius:10px;padding:8px 14px 8px 14px;overflow:hidden;}
 .dc-head{display:flex;align-items:baseline;gap:8px;margin-bottom:5px;flex:none;}
-.dc-dot{width:8px;height:8px;border-radius:50%;background:#f87171;box-shadow:0 0 6px #f87171;flex:none;align-self:center;}
+.dc-dot{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;flex:none;align-self:center;animation:pulse 1.8s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 .dc-title{font-size:12.5px;font-weight:800;letter-spacing:.5px;color:#dce9ff;text-transform:uppercase;}
 .dc-sparkwrap{position:relative;flex:1;min-height:0;}
 .dc-spark{width:100%;height:100%;display:block;}
@@ -399,17 +409,17 @@ function dropsChartComponent() {
 `;
   const html = `
 <div class="dc">
-  <div class="dc-head"><span class="dc-dot"></span><span class="dc-title">Cameras Offline &mdash; Ultimas 3H</span></div>
+  <div class="dc-head"><span class="dc-dot"></span><span class="dc-title">Ultimas Quedas &mdash; 3H</span></div>
   <div class="dc-sparkwrap" id="dc-sparkwrap">
     <svg class="dc-spark" id="dc-spark" viewBox="0 0 1200 160" preserveAspectRatio="none">
       <defs>
         <linearGradient id="dcFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#f87171" stop-opacity="0.45"/>
-          <stop offset="100%" stop-color="#f87171" stop-opacity="0"/>
+          <stop offset="0%" stop-color="#34d399" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#34d399" stop-opacity="0"/>
         </linearGradient>
       </defs>
       <path id="dc-area" fill="url(#dcFill)" stroke="none"></path>
-      <path id="dc-line" fill="none" stroke="#f87171" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+      <path id="dc-line" fill="none" stroke="#34d399" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
     </svg>
     <div class="dc-vline" id="dc-vline"></div>
     <div class="dc-tip" id="dc-tip"></div>
@@ -440,8 +450,9 @@ if (sparkwrap && !sparkwrap.__hgBound) {
       var pad = function (n) { return (n < 10 ? '0' : '') + n; };
       var d2 = new Date(p.t);
       var timeStr = pad(d2.getHours()) + ':' + pad(d2.getMinutes());
-      var txt = timeStr + ' — ' + p.v + ' offline';
-      if (p.cams && p.cams.length) txt += ': ' + p.cams.slice(0, 3).join(', ') + (p.cams.length > 3 ? ' +' + (p.cams.length - 3) : '');
+      var total = svgEl.__hgTotal || 0;
+      var txt = timeStr + ' — ' + p.v + '/' + total + ' online';
+      if (p.cams && p.cams.length) txt += ' (offline: ' + p.cams.slice(0, 3).join(', ') + (p.cams.length > 3 ? ' +' + (p.cams.length - 3) : '') + ')';
       tip.textContent = txt;
       tip.style.left = Math.max(10, Math.min(90, xPct)) + '%';
       tip.style.display = 'block';
@@ -469,14 +480,34 @@ try {
   }
   raw.sort(function (a, b) { return a.t - b.t; });
 
+  var totalCamsSet = {};
+  raw.forEach(function (r) { totalCamsSet[r.cam] = true; });
+  var totalCamCount = Object.keys(totalCamsSet).length;
+
+  var tr = data && data.timeRange;
+  var domainFrom = tr && tr.from ? (tr.from.valueOf ? tr.from.valueOf() : +tr.from) : null;
+  var domainTo = tr && tr.to ? (tr.to.valueOf ? tr.to.valueOf() : +tr.to) : null;
+  if (domainFrom == null || domainTo == null || isNaN(domainFrom) || isNaN(domainTo) || domainTo <= domainFrom) {
+    domainFrom = raw.length ? raw[0].t : Date.now() - 3 * 3600000;
+    domainTo = raw.length ? raw[raw.length - 1].t : Date.now();
+  }
+
+  // Inverte a semantica: a linha mostra quantas câmeras flagradas estão
+  // ONLINE a cada instante — ela CAI quando uma câmera cai (não sobe), pra
+  // passar a mensagem de "estava estável e caiu nesse momento".
   var state = {};
+  Object.keys(totalCamsSet).forEach(function (c) { state[c] = 1; });
   var points = [];
+  if (totalCamCount > 0) points.push({ t: domainFrom, v: totalCamCount, cams: [] });
   raw.forEach(function (p) {
     state[p.cam] = p.v;
-    var offlineCams = [];
-    Object.keys(state).forEach(function (c) { if (state[c] === 0) offlineCams.push(c); });
-    points.push({ t: p.t, v: offlineCams.length, cams: offlineCams });
+    var offlineCams = Object.keys(state).filter(function (c) { return state[c] === 0; });
+    points.push({ t: p.t, v: totalCamCount - offlineCams.length, cams: offlineCams });
   });
+  if (points.length) {
+    var lastPt = points[points.length - 1];
+    points.push({ t: domainTo, v: lastPt.v, cams: lastPt.cams });
+  }
 
   var svgNode = htmlNode.getElementById('dc-spark');
   var sparkwrap = htmlNode.getElementById('dc-sparkwrap');
@@ -485,7 +516,7 @@ try {
   var oldEmpty = sparkwrap.querySelector('.dc-empty');
   if (oldEmpty) oldEmpty.remove();
 
-  if (svgNode) svgNode.__hgPoints = points;
+  if (svgNode) { svgNode.__hgPoints = points; svgNode.__hgTotal = totalCamCount; }
 
   if (points.length === 0) {
     pathLine.setAttribute('d', '');
@@ -497,8 +528,7 @@ try {
   } else {
     var W = 1200, H = 160, pad2 = 10;
     var t0 = points[0].t, t1 = points[points.length - 1].t;
-    var vs = points.map(function (p) { return p.v; });
-    var maxV = Math.max.apply(null, vs.concat([1]));
+    var maxV = Math.max(totalCamCount, 1);
     var totalT = t1 - t0 || 1;
     function xOf(t) { return ((t - t0) / totalT) * W; }
     function yOf(v) { return H - pad2 - (v / maxV) * (H - pad2 * 2); }

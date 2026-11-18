@@ -275,14 +275,22 @@ precisar saber qual é a real.
   - Eixo de tempo com **múltiplas marcações automáticas** (nunca só início/fim) —
     ver algoritmo de "nice step" abaixo.
 - **Listas de status (ex.: tabela de câmeras/dispositivos online/offline)**:
-  cada linha mostra o nome + um **badge sólido** colorido à direita
-  (`border-radius:999px`, fundo verde/vermelho/cinza **sólido**, texto escuro
-  em caixa alta pequena) — não um fundo translúcido na linha inteira. Fundo de
-  linha tintado em baixa opacidade (ex.: `rgba(verde,0.1)`) fica com contraste
-  fraco demais pra uma TV vista de longe; o badge sólido é o que dá o "golpe de
-  vista" rápido de verde/vermelho que uma lista de status precisa. Zebra sutil
-  (`rgba(255,255,255,0.02)` nas linhas pares) e uma borda fina entre linhas
-  ajudam a separar visualmente sem precisar de cor de fundo forte.
+  nunca um fundo translúcido na linha inteira (`rgba(verde,0.1)` fica com
+  contraste fraco demais numa TV vista de longe). Duas opções válidas,
+  escolha pelo espaço disponível:
+  - **Badge sólido** à direita do nome (`border-radius:999px`, fundo
+    verde/vermelho/cinza **sólido**, texto escuro em caixa alta pequena) —
+    quando sobra largura.
+  - **Ponto de status** (bolinha colorida ~9px, com `box-shadow` leve de glow
+    nas cores "ativas", igual ao indicador "ao vivo" do cabeçalho) à
+    **esquerda** do nome — quando o espaço é mais apertado (ex.: lista densa
+    de 30+ itens numa TV). Além de mais compacto, libera a largura que o
+    badge ocuparia pra aumentar a fonte do nome — ganho real de
+    legibilidade, não só estético (usado no dashboard de Câmeras, v5, depois
+    que o badge de texto ficou pequeno demais pra ler de longe).
+  Zebra sutil (`rgba(255,255,255,0.02)` nas linhas pares) e uma borda fina
+  entre linhas ajudam a separar visualmente sem precisar de cor de fundo forte,
+  em qualquer uma das duas opções.
 
 ### Padrão de hover em gráfico custom (sem biblioteca)
 
@@ -506,4 +514,17 @@ antes de publicar — foi exatamente assim que esse bug foi pego (câmera
 Se um dia for mesmo necessário mostrar o estado de cada categoria
 individualmente (não só o agregado), prefira uma **tabela/lista com badge por
 item** (ver seção de identidade visual) a um timeline multi-trilha.
+
+**⚠️ Escolha a polaridade da métrica pra bater com a leitura intuitiva.** Pra
+um gráfico de "falhas ao longo do tempo", plotar a **contagem de itens com
+problema** (ex.: offline) faz a linha **subir** quando algo piora — visualmente
+contraintuitivo, porque "subir" normalmente lê como "melhorando". Prefira
+plotar a métrica **saudável** (ex.: contagem de itens online) — a linha
+**cai** exatamente no instante da falha e **sobe** na recuperação, o que bate
+com a leitura natural de "estava estável e caiu agora" (dashboard de Câmeras,
+v5). Ajuste a cor junto (verde pra métrica saudável, não mais vermelho).
+Também vale usar `data.timeRange` (não o min/max dos eventos) como domínio do
+eixo X, com um ponto sintético no início da janela com o valor "tudo saudável"
+— sem isso a linha já começa "caída" se a primeira falha for antes do início
+dos dados, perdendo o efeito de "estava estável antes".
 

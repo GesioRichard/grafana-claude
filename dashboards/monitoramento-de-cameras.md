@@ -306,11 +306,76 @@ Colunas por NVR: NVR01-04 w=5 (x=0,5,10,15), NVR05 w=4 (x=20) — total 24.
 
 Publicado como `version: 4` (16 painéis).
 
+**Pendências da v4** (resolvidas na v5 abaixo): nível de acabamento do card
+unificado, legibilidade da tabela, teto de grid.
+
+### v5 — 2026-11-18
+
+**Por quê**: usuário confirmou que a v4 "melhorou bastante", pediu polimento
+fino em 4 pontos específicos.
+
+**O que mudou**:
+
+1. **Tabela de câmeras**: trocado o badge sólido com texto ("ONLINE"/
+   "OFFLINE"/"EMPTY") por um **ponto de status** (bolinha colorida, com glow
+   nas online/offline, igual ao indicador "ao vivo" usado no resto do
+   dashboard) à esquerda do nome. Isso libera a largura que o texto do badge
+   ocupava, usada pra aumentar a fonte do nome da câmera de `12px` pra
+   `14.5px` — ganho real de legibilidade, não só cosmético.
+2. **Card do NVR reorganizado em 3 linhas**, como pedido:
+   - Linha 1: ponto "ao vivo" + título do NVR + **Online/Offline movidos pro
+     canto direito**, alinhados verticalmente com o título (`margin-left:auto`
+     no container, mesmo `align-items:center` da linha) — formato "32 ONLINE /
+     0 OFFLINE" compacto.
+   - Linha 2: barras de CPU e Memória (sem mudança de posição, só ganharam
+     mais altura/fonte com o espaço liberado).
+   - Linha 3: Download/Upload, agora sozinhos na própria linha (antes
+     dividiam uma grade de 4 colunas com Online/Offline) — puderam crescer de
+     `17px`/`10px` pra `22px`/`11.5px` (valor/label).
+3. **Mais espaço pra tabela**: o gráfico de quedas ficou mais simples na v4
+   (1 linha em vez de várias trilhas), então não precisa mais de tanta altura
+   — reduzido de `h=6` pra `h=4`, e as 2 linhas de grade ganhas foram todas
+   pra tabela de câmeras (`h=15` → `h=17`), aumentando ~13% a altura
+   disponível por linha de câmera.
+4. **Gráfico de quedas invertido**: antes a linha **subia** quando uma câmera
+   caía (contagem de offline crescendo) — o usuário achou contraintuitivo,
+   queria que a linha **caísse** no momento da queda, pra passar a mensagem
+   "estava estável e caiu agora". Trocado pra plotar a **contagem de câmeras
+   online** entre as flagradas (começa no total, cai quando alguma cai, sobe
+   de volta quando reconecta) — cor da linha trocada de vermelho pra verde
+   (convenção "saudável"), e o domínio do eixo X passou a usar
+   `data.timeRange` (janela real do painel, `timeFrom: 3h`) em vez do
+   min/max dos eventos, com um ponto inicial sintético no início da janela
+   (valor = total de câmeras, saudável) e um ponto final no fim da janela
+   (repete o último valor conhecido) — isso faz a linha ficar **estável antes
+   da primeira queda real**, em vez de já começar caída, reforçando a leitura
+   de "caiu nesse momento específico". Título trocado pra "ULTIMAS QUEDAS —
+   3H" (ajustável). Tooltip no hover agora mostra "HH:MM — X/Y online" +
+   lista de offline, em vez de só a contagem de offline.
+
+**Validado com dados reais** (`POST /api/ds/query` + `mock_panel.js` + scripts
+de detalhe ad-hoc) nos mesmos 3 cenários da v4 (card unificado com 6 queries
+mistas; tabela; gráfico de quedas pra NVR02 com 1 câmera e NVR05 com 18).
+Confirmado visualmente no resultado do mock: NVR02 mostra a linha estável em
+`1/1`, caindo pra `0` no meio da janela e voltando (exatamente o padrão de
+flapping que o usuário quer investigar); NVR05 mostra a queda gradual até `0`
+conforme as câmeras com problema crônico ficam offline uma a uma.
+
+**Layout final (grid 24×29)**:
+
+| Seção | y | h |
+|---|---|---|
+| Cabeçalho global (full-width) | 0 | 2 |
+| Card unificado por NVR | 2 | 6 |
+| Tabela de câmeras | 8 | 17 |
+| Gráfico de quedas (série temporal agregada, invertida, 3h) | 25 | 4 |
+
+Colunas por NVR: NVR01-04 w=5 (x=0,5,10,15), NVR05 w=4 (x=20) — total 24.
+
+Publicado como `version: 5` (16 painéis, mesma contagem da v4).
+
 **Pendências / a confirmar com o usuário após ver na TV real**:
-- Nível de acabamento do card unificado e legibilidade geral — primeira vez
-  que esse layout é visto numa tela real.
-- Legibilidade da tabela de câmeras com os novos badges (32 linhas em 15
-  linhas de grade, um pouco mais apertado que a v3 pra abrir espaço pro card
-  unificado).
+- Legibilidade real dos novos pontos de status na tabela e do card
+  reorganizado — primeira vez vistos numa tela real.
 - Confirmar que o teto 24×29 realmente se aplica a esta TV (pendência antiga,
   ainda não confirmada explicitamente pelo usuário).
