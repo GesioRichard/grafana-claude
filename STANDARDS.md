@@ -30,6 +30,77 @@ dashboard diga o contrário.
 > imprimir a soma final de `gridPos` e conferir contra o teto documentado daquele
 > dashboard (ver `console.log` de bounding box em `generate_dashboard.js`).
 
+## Workflow geral (leia esta seção primeiro, antes de tudo mais)
+
+### Alterar um dashboard existente
+
+1. `GET /api/dashboards/uid/<uid>` → salvar/atualizar o backup/snapshot bruto em
+   `scripts/<nome>/*.json` antes de qualquer mudança.
+2. Escrever/editar o script gerador em `scripts/<nome-dashboard>/generate_dashboard.js`
+   (Node puro, sem dependências externas) que produz o payload completo
+   `{dashboard, folderId, overwrite:true, message}` a partir do backup + das
+   definições de cada painel (HTML/CSS/JS se for HTML Graphics, ou JSON de painel
+   nativo se não for — ver critério de escolha abaixo).
+3. Validar antes de publicar:
+   - O script deve **falhar** (`process.exit(1)`), não só avisar, se a soma final
+     de `gridPos` ultrapassar o teto de grid documentado daquele dashboard (ver
+     exemplo em `scripts/monitoramento-de-cameras/generate_dashboard.js`).
+   - Se usar HTML Graphics: validar sintaxe de cada `onInit`/`onRender` gerado
+     (`new Function(...)`) e, se a mudança envolveu lógica de dados, rodar o
+     harness de mock (ver seção do plugin abaixo) contra uma amostra real via
+     `POST /api/ds/query` antes de publicar.
+4. Publicar: `POST /api/dashboards/db` com o payload gerado.
+5. Pedir para o usuário conferir visualmente na TV/navegador real — **não há
+   acesso a browser remoto na rede dele**, então toda validação visual depende do
+   retorno dele (prints, descrição).
+6. **Atualizar o markdown do dashboard correspondente em `dashboards/`** com o que
+   mudou, por quê, e a nova versão publicada. Se a mudança alterou um padrão
+   **compartilhado** (cor, tipografia, algoritmo de eixo, workflow, etc.),
+   atualizar também este `STANDARDS.md`.
+7. **Commitar em português** (ver `CLAUDE.md`) — não encerrar a tarefa com
+   trabalho publicado mas não commitado.
+
+### Criar um dashboard novo do zero
+
+1. Pedir ao usuário a URL/UID do dashboard-base já existente no Grafana (via de
+   regra já existe algo "cru" feito pela equipe que o usuário quer reorganizar/
+   redesenhar) e a pasta/folder de destino.
+2. `GET /api/dashboards/uid/<uid>` — mesmo primeiro passo de "alterar um
+   existente" acima; isso vira o backup/snapshot inicial.
+3. Decidir **HTML Graphics vs. painéis nativos** (ver critério abaixo) antes de
+   escrever qualquer código.
+4. Se for usar HTML Graphics: confirmar que o plugin está instalado e habilitado
+   (`GET /api/plugins/gapit-htmlgraphics-panel/settings` → `"enabled":true`) antes
+   de desenhar qualquer painel — ver passos de instalação na seção do plugin.
+5. Confirmar com o usuário o **teto de grid** (linhas×colunas) da TV onde vai ser
+   exibido — não assumir 24×29 sem confirmar, a menos que seja a mesma classe de
+   tela já documentada em outro dashboard.
+6. Criar `scripts/<nome-dashboard>/` e o `generate_dashboard.js`, usando um dos
+   dois dashboards existentes como modelo de estrutura (Fronius pra HTML
+   Graphics, Câmeras pra nativo) e reaproveitando os padrões visuais/técnicos do
+   restante deste arquivo.
+7. Seguir os passos 3-7 de "Alterar um dashboard existente" acima (validar,
+   publicar, pedir confirmação visual, documentar, commitar).
+8. Criar `dashboards/<nome-dashboard>.md` do zero (estrutura dos exemplos
+   existentes como modelo) e adicionar uma linha nas tabelas de dashboards em
+   `CLAUDE.md` e `README.md`.
+
+### HTML Graphics vs. painéis nativos: como decidir
+
+- **Painéis nativos** (`stat`, `bargauge`, `table`, `state-timeline`,
+  `timeseries`, etc.) sempre que o resultado desejado já é parecido com algum
+  tipo de painel nativo — mais simples de manter, sem depender de plugin extra,
+  e o Grafana já resolve legibilidade/tema/transformações de dado (ex.:
+  "Partition by values") sem precisar de JS. Usado no dashboard de Câmeras.
+- **HTML Graphics** quando o design pedido foge do que um painel nativo consegue
+  fazer sozinho — layout composto (ex.: um card com título + várias métricas +
+  barra de carga + sparkline, tudo num painel só), tipografia/paleta muito
+  específica, interações customizadas (hover/tooltip próprio), ou fundo de
+  página animado. Usado no dashboard Fronius.
+- Nada impede misturar os dois **no mesmo dashboard** (um cabeçalho HTML
+  Graphics ao lado de tabelas nativas, por exemplo) — a escolha é por painel,
+  não por dashboard inteiro.
+
 ## Instância Grafana
 
 - Acessada normalmente em `http://192.168.0.104:3000` (confirmar com o usuário caso
@@ -367,22 +438,3 @@ valor da categoria (o nome da câmera) como nome de campo — necessário pro
 novos de "câmeras que caíram" do dashboard de Câmeras (v2) a partir da query de
 `menor_status_periodo` (ver `dashboards/monitoramento-de-cameras.md`).
 
-## Workflow geral de alteração de dashboard
-
-1. `GET /api/dashboards/uid/<uid>` → salvar backup bruto (`scripts/<nome>/*.json`)
-   antes de qualquer mudança.
-2. Escrever/editar o script gerador em `scripts/<nome-dashboard>/generate_dashboard.js`
-   (Node puro, sem dependências externas) que produz o payload completo
-   `{dashboard, folderId, overwrite:true, message}` a partir do backup + das
-   definições de HTML/CSS/JS de cada tipo de painel.
-3. Validar sintaxe JS de cada `onInit`/`onRender` gerado (`new Function(...)`) e, se a
-   mudança envolveu lógica de dados, rodar o harness de mock (ver seção do plugin
-   acima) antes de publicar.
-4. Publicar: `POST /api/dashboards/db` com o payload gerado.
-5. Pedir para o usuário conferir visualmente na TV/navegador real — **não há acesso a
-   browser remoto na rede dele**, então toda validação visual depende do retorno dele
-   (prints, descrição).
-6. **Atualizar o markdown do dashboard correspondente em `dashboards/`** com o que
-   mudou, por quê, e a nova versão publicada. Se a mudança alterou um padrão
-   **compartilhado** (cor, tipografia, algoritmo de eixo, etc.), atualizar também
-   este `STANDARDS.md`.

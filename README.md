@@ -1,10 +1,13 @@
 # Grafana Claude — Dashboards TV ATALAIA
 
 Repositório de apoio para criar e manter os dashboards Grafana customizados
-exibidos nas TVs de monitoramento da ATALAIA. Cada dashboard é construído em cima
-do plugin **HTML Graphics** (painéis com HTML/CSS/JS próprio, em vez dos painéis
-nativos do Grafana), gerado a partir de um script Node e publicado via API — não
-há edição manual pela UI do Grafana para essas mudanças.
+exibidos nas TVs de monitoramento da ATALAIA. Cada dashboard é tratado como
+artefato versionado: um script Node monta o JSON completo do dashboard e publica
+via API (`POST /api/dashboards/db`) — não há edição manual pela UI do Grafana
+para mudanças estruturais. Dependendo do dashboard, os painéis são feitos com o
+plugin **HTML Graphics** (HTML/CSS/JS 100% customizado) ou com painéis **nativos**
+do Grafana (`stat`, `bargauge`, `table`, `state-timeline`, etc.) — a escolha é por
+painel, não uma regra única do repositório (ver `STANDARDS.md`).
 
 Este repositório não guarda o Grafana em si, só os artefatos usados para
 **gerar, versionar e documentar** os dashboards: scripts geradores, backups/
@@ -14,8 +17,9 @@ snapshots do que está publicado, e o histórico de decisões de cada um.
 
 Editar um dashboard feito de painéis HTML Graphics diretamente pela UI do Grafana é
 inviável (o código de cada painel é extenso e repetitivo entre os 10+ cards de um
-mesmo dashboard). O fluxo aqui é: um script Node monta o JSON completo do
-dashboard a partir de templates de HTML/CSS/JS reutilizáveis, valida a sintaxe, e
+mesmo dashboard), e mesmo dashboards nativos têm dezenas de painéis quase-idênticos
+que só variam por host/query. O fluxo aqui é: um script Node monta o JSON completo
+do dashboard a partir de templates reutilizáveis, valida antes de publicar, e
 publica via `POST /api/dashboards/db`. Isso também é o que permite que uma sessão
 do Claude, meses depois, retome exatamente de onde parou — sem o histórico escrito,
 cada ajuste de fonte/cor/layout viraria tentativa e erro do zero.
@@ -25,31 +29,38 @@ cada ajuste de fonte/cor/layout viraria tentativa e erro do zero.
 ```
 .
 ├── CLAUDE.md                  # instruções que o Claude Code lê automaticamente nesta pasta
-├── STANDARDS.md               # padrão visual e técnico compartilhado entre todos os dashboards
+├── STANDARDS.md               # padrão visual e técnico compartilhado + workflow passo a passo
 ├── dashboards/                # 1 markdown por dashboard: contexto, arquitetura e changelog
-│   └── paineis-solares-fronius.md
-└── scripts/                   # 1 pasta por dashboard, com o script gerador e scripts de apoio
-    └── paineis-solares-fronius/
-        ├── generate_dashboard.js       # monta o JSON do dashboard
-        ├── validate_js.js              # valida sintaxe do JS de cada painel antes de publicar
-        ├── mock_weekly.js              # exemplo de harness pra testar lógica de dados sem navegador
-        └── last-deployed-snapshot.json # snapshot da última versão publicada (referência/rollback)
+│   ├── paineis-solares-fronius.md
+│   └── monitoramento-de-cameras.md
+└── scripts/                   # 1 pasta por dashboard, com o script gerador e backups/snapshots
+    ├── paineis-solares-fronius/
+    │   ├── generate_dashboard.js       # monta o JSON do dashboard
+    │   ├── validate_js.js              # valida sintaxe do JS de cada painel antes de publicar
+    │   ├── mock_single.js              # harness pra testar lógica de dados sem navegador
+    │   └── last-deployed-snapshot.json # snapshot da última versão publicada (referência/rollback)
+    └── monitoramento-de-cameras/
+        ├── generate_dashboard.js
+        ├── backup_v1.json
+        └── last-deployed-snapshot.json
 ```
 
 ## Por onde começar
 
-- **Vai mexer em algum dashboard?** Leia `CLAUDE.md` primeiro (regras obrigatórias),
-  depois `STANDARDS.md` (padrão visual/técnico) e o markdown específico em
-  `dashboards/<nome>.md` (histórico daquele dashboard).
+- **Vai mexer em algum dashboard, ou criar um novo?** Leia `CLAUDE.md` primeiro
+  (visão geral + regras obrigatórias), depois `STANDARDS.md` (o workflow passo a
+  passo está logo no topo) e o markdown específico em `dashboards/<nome>.md`
+  (histórico daquele dashboard, se já existir).
 - **Só quer entender o que já existe?** A lista de dashboards documentados está em
   `dashboards/`; cada um tem sua URL, UID e arquitetura descritos no topo do
   respectivo markdown.
 
 ## Dashboards atuais
 
-| Dashboard | Documento | Uso |
-|---|---|---|
-| Painéis Solares - Fronius | [`dashboards/paineis-solares-fronius.md`](dashboards/paineis-solares-fronius.md) | TV de monitoramento, geração solar em tempo real |
+| Dashboard | Documento | Abordagem | Uso |
+|---|---|---|---|
+| Painéis Solares - Fronius | [`dashboards/paineis-solares-fronius.md`](dashboards/paineis-solares-fronius.md) | HTML Graphics | TV de monitoramento, geração solar em tempo real |
+| Monitoramento de Câmeras | [`dashboards/monitoramento-de-cameras.md`](dashboards/monitoramento-de-cameras.md) | Painéis nativos | TV de monitoramento, status de NVRs e câmeras |
 
 ## Credenciais
 

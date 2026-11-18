@@ -142,12 +142,28 @@ implementado porque não foi pedido.
 
 Colunas por NVR: NVR01-04 w=5 (x=0,5,10,15), NVR05 w=4 (x=20) — total 24.
 
-**Pendências / a confirmar com o usuário após ver na TV real**:
+### Verificação pós-publicação (sessão de 2026-11-18, outro chat)
+
+A v2 foi publicada numa sessão anterior sem o trabalho ter sido commitado no git.
+Nesta sessão, antes de commitar, conferi o estado **real** do Grafana (não só o
+que o payload local dizia) via `GET /api/dashboards/uid/ag4ox6tas8uf4b`:
+
+- Live está mesmo na `version: 2`, 30 painéis, batendo exatamente com a tabela de
+  layout acima (gridPos de cada um dos 30 painéis conferido um a um).
+- Fix do NVR 05 confirmado: os dois targets do card online/offline (painel #26)
+  têm `ht.name = 'NVR 05'` corretamente, não mais `'NVR 04'`.
+- Os 5 painéis State Timeline (#6, #12, #18, #24, #30) têm `ht.name` correto cada
+  um pro seu próprio NVR, `timeFrom: "3h"` presente em todos, e a transformação
+  `partitionByValues` configurada igual em todos.
+
+**Pendências / a confirmar com o usuário após ver na TV real** (isso eu não
+consigo validar sem acesso a navegador — continua em aberto):
 - Altura do gráfico State Timeline (6 linhas) pode ficar apertada para NVR03/04/05
   (10-18 câmeras flagradas) — ajustar altura ou filtrar a query se a leitura não
   for satisfatória.
 - Confirmar que o teto 24×29 realmente se aplica a esta TV (assumido igual ao
   Fronius).
-- Confirmar visualmente que a transformação `partitionByValues` está nomeando
-  corretamente cada câmera como uma linha separada no State Timeline (schema do
-  Grafana 10.4, não validável sem acesso a navegador remoto).
+- Confirmar visualmente que a transformação `partitionByValues` está realmente
+  renderizando cada câmera como uma linha separada e legível no State Timeline
+  (a configuração está correta no JSON, mas o resultado visual/legibilidade só o
+  usuário consegue confirmar).
